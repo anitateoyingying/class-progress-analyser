@@ -126,7 +126,7 @@ function parseGrid(grid) {
       if (s.endsWith("%")) pcts++;
       else if (/^\d+(\.0+)?$/.test(s)) ints++;
       else if (typeof v === "number" && v > 1) ints++; // xlsx numbers
-      else if (typeof v === "number") pcts++;          // 0–1 fractions = rates
+      else if (typeof v === "number") pcts++;          // 0 to 1 fractions = rates
     }
     if (filled > 0 && ints >= filled * 0.8) countCols.push(c);
   }
@@ -193,7 +193,7 @@ async function fetchStrategies(objectives, context) {
     }),
   });
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401) { showGate("Session expired — please enter the password again."); throw new Error("Incorrect password"); }
+  if (res.status === 401) { showGate("Session expired. Please enter the password again."); throw new Error("Incorrect password"); }
   if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
   if (!Array.isArray(data.strategies)) throw new Error("Malformed server response");
   return data.strategies;
@@ -215,11 +215,11 @@ fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInpu
 async function addFiles(fileList) {
   for (const file of fileList) {
     if (!file.name.toLowerCase().endsWith(".xlsx")) {
-      globalError(`"${file.name}" skipped — only .xlsx files are supported.`);
+      globalError(`"${file.name}" skipped: only .xlsx files are supported.`);
       continue;
     }
     if (file.size > 20 * 1024 * 1024) {
-      globalError(`"${file.name}" skipped — larger than 20 MB.`);
+      globalError(`"${file.name}" skipped: larger than 20 MB.`);
       continue;
     }
     const id = String(nextId++);
@@ -277,20 +277,26 @@ function renderCard(entry) {
     return;
   }
 
-  // metadata inputs
+  // metadata dropdowns
   const metaRow = el("div", "meta-row");
-  for (const [key, label, list, opts] of [
-    ["centre", "Centre", "centre-list", CENTRES],
-    ["class", "Class", "class-list", CLASSES],
-    ["quarter", "Quarter", "quarter-list", QUARTERS],
+  for (const [key, label, opts] of [
+    ["centre", "Centre", CENTRES],
+    ["class", "Class", CLASSES],
+    ["quarter", "Quarter", QUARTERS],
   ]) {
     const lab = el("label", null, label);
-    const input = el("input");
-    input.setAttribute("list", list);
-    input.placeholder = opts[0];
-    input.value = entry.meta[key] || "";
-    input.addEventListener("input", () => { entry.meta[key] = input.value; });
-    lab.appendChild(input);
+    const select = el("select");
+    const placeholder = el("option", null, `Select ${label.toLowerCase()}`);
+    placeholder.value = "";
+    select.appendChild(placeholder);
+    for (const v of opts) {
+      const opt = el("option", null, v);
+      opt.value = v;
+      select.appendChild(opt);
+    }
+    select.value = entry.meta[key] || "";
+    select.addEventListener("change", () => { entry.meta[key] = select.value; });
+    lab.appendChild(select);
     metaRow.appendChild(lab);
   }
   card.appendChild(metaRow);
@@ -340,9 +346,39 @@ function renderCard(entry) {
 function statTile(label, value, sub) {
   const tile = el("div", "stat-tile");
   tile.appendChild(el("div", "label", label));
-  tile.appendChild(el("div", "value", value));
+  const valEl = el("div", "value", value);
+  tile.appendChild(valEl);
   if (sub) tile.appendChild(el("div", "sub", sub));
+  countUp(valEl, value);
   return tile;
+}
+
+function countUp(node, finalText) {
+  const match = /^(\d+)(%?)$/.exec(finalText);
+  if (!match || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const target = Number(match[1]), suffix = match[2];
+  const dur = 700, start = performance.now();
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - t, 3);
+    node.textContent = `${Math.round(target * eased)}${suffix}`;
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function confettiBurst(container) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const colors = ["--confetti-1", "--confetti-2", "--confetti-3", "--confetti-4"];
+  for (let i = 0; i < 18; i++) {
+    const piece = el("span", "confetti-burst");
+    piece.style.background = `var(${colors[i % colors.length]})`;
+    piece.style.left = `${8 + Math.random() * 84}%`;
+    piece.style.top = "0";
+    piece.style.animationDelay = `${Math.random() * 0.25}s`;
+    container.appendChild(piece);
+    setTimeout(() => piece.remove(), 1600);
+  }
 }
 
 function fmtNum(n) { return n.toLocaleString("en-US"); }
@@ -415,7 +451,7 @@ function objectiveBlock(entry, r, i) {
     for (const s of strat) ol.appendChild(el("li", null, s));
     block.appendChild(ol);
   } else if (entry.strategies) {
-    block.appendChild(el("p", "strategies-pending", "No strategies returned for this objective — try regenerating."));
+    block.appendChild(el("p", "strategies-pending", "No strategies returned for this objective. Try regenerating."));
   } else {
     block.appendChild(el("p", "strategies-pending", "Strategies will appear here after analysis."));
   }
@@ -461,6 +497,10 @@ async function analyse(entry) {
   } finally {
     entry.busy = false;
     renderCard(entry);
+    if (entry.strategies) {
+      const card = document.getElementById(`card-${entry.id}`);
+      if (card) confettiBurst(card);
+    }
   }
 }
 
@@ -491,7 +531,7 @@ async function downloadDocx(entry) {
   entry.rows.slice(0, TOP_N).forEach((r, i) => {
     children.push(new Paragraph({ text: `Objective ${i + 1}: ${r.objective}`, heading: HeadingLevel.HEADING_3 }));
     children.push(new Paragraph(`Domain: ${r.domain}`));
-    children.push(new Paragraph(`Students — Not Yet: ${r.notYet}, Emerging: ${r.emerging}, Achieved: ${r.achieved}`));
+    children.push(new Paragraph(`Students: Not Yet ${r.notYet}, Emerging ${r.emerging}, Achieved ${r.achieved}`));
     const strat = entry.strategies?.[i] || [];
     if (strat.length === 0) {
       children.push(new Paragraph("No strategies generated."));
@@ -510,18 +550,6 @@ async function downloadDocx(entry) {
   URL.revokeObjectURL(a.href);
 }
 
-// ===== datalists & boot =====
-function fillDatalist(id, values) {
-  const dl = document.getElementById(id);
-  for (const v of values) {
-    const opt = document.createElement("option");
-    opt.value = v;
-    dl.appendChild(opt);
-  }
-}
-fillDatalist("centre-list", CENTRES);
-fillDatalist("class-list", CLASSES);
-fillDatalist("quarter-list", QUARTERS);
-
+// ===== boot =====
 if (getPassword()) showApp();
 else showGate();

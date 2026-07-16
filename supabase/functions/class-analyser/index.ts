@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
   const listText = objectives
     .map(
       (o, i) =>
-        `${i + 1}. Objective: ${o.objective}\n   Domain: ${o.domain}\n   Students — Not Yet: ${o.notYet}, Emerging: ${o.emerging}, Achieved: ${o.achieved}`,
+        `${i + 1}. Objective: ${o.objective}\n   Domain: ${o.domain}\n   Students: Not Yet ${o.notYet}, Emerging ${o.emerging}, Achieved ${o.achieved}`,
     )
     .join("\n");
 
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     `You are an expert early-childhood educator in Singapore (NEL framework, preschool centres). ` +
     `A class progress report ranked these learning objectives as needing the most attention` +
     (body.context ? ` (class context: ${String(body.context).slice(0, 200)})` : "") +
-    `. Objectives may be bilingual English/Chinese — respond in English only.\n\n${listText}\n\n` +
+    `. Objectives may be bilingual English/Chinese; respond in English only.\n\n${listText}\n\n` +
     `For EACH numbered objective, give exactly 3 concrete, actionable classroom strategies a teacher ` +
     `can run with the whole class or small groups. Be specific (activities, materials, routines), ` +
     `not generic advice. Return every objective in the same order, using index 1..${objectives.length}.`;

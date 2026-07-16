@@ -7,12 +7,12 @@ that need the most attention and get AI-generated teaching strategies.
 
 ## How it works
 
-- The Excel file is parsed **entirely in your browser** (SheetJS) — student data
-  never leaves your device.
+- The Excel file is parsed **entirely in your browser** (SheetJS), so student
+  data never leaves your device.
 - Only anonymous objective statistics (objective text + Not Yet / Emerging /
   Achieved counts) are sent to a Supabase Edge Function, which calls **Google
   Gemini** to generate 3 classroom strategies per objective.
-- The Gemini API key lives server-side in Supabase secrets — nothing secret in
+- The Gemini API key lives server-side in Supabase secrets; nothing secret in
   this repo.
 - Reports can be exported as Word documents (docx.js), generated client-side.
 

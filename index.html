@@ -5,15 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Class Progress Analyser</title>
 <link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" defer></script>
 <script src="app.js" defer></script>
 </head>
 <body>
+<div class="rainbow-strip" aria-hidden="true"></div>
 
 <div id="gate" class="gate hidden">
-  <div class="gate-card">
+  <div class="gate-card pop-in">
     <img src="logo.png" alt="" class="gate-logo">
     <h1>Class Progress Analyser</h1>
     <p>Enter the app password to continue.</p>
@@ -26,19 +30,23 @@
 </div>
 
 <main id="app" class="hidden">
-  <header class="app-header">
+  <header class="app-header rise-1">
     <img src="logo.png" alt="Logo" class="header-logo">
     <div>
       <h1>Class Progress Analyser</h1>
-      <p class="subtitle">Upload Taidii class progress reports (.xlsx) to identify key learning concerns and get AI teaching strategies.</p>
+      <p class="subtitle">Upload Taidii class progress reports (.xlsx) to spot key learning concerns and get teaching strategies.</p>
     </div>
     <button id="lock-btn" class="ghost-btn" title="Lock the app">Lock</button>
   </header>
 
-  <section id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload Excel files">
+  <section id="dropzone" class="dropzone rise-2" tabindex="0" role="button" aria-label="Upload Excel files">
     <input type="file" id="file-input" accept=".xlsx" multiple hidden>
-    <p><strong>Drop .xlsx files here</strong> or click to browse</p>
-    <p class="muted">Reports are parsed entirely in your browser — files never leave your device. Only anonymous objective statistics are sent for AI analysis.</p>
+    <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 6 L24 30 M14 20 L24 30 L34 20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 34 L8 40 Q8 42 10 42 L38 42 Q40 42 40 40 L40 34" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p class="drop-title">Drop .xlsx files here or click to browse</p>
+    <p class="muted">Reports are parsed entirely in your browser, so files never leave your device. Only anonymous objective statistics are sent for AI analysis.</p>
   </section>
 
   <div id="global-errors"></div>
@@ -50,10 +58,6 @@
 </main>
 
 <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
-
-<datalist id="centre-list"></datalist>
-<datalist id="class-list"></datalist>
-<datalist id="quarter-list"></datalist>
 
 </body>
 </html>
