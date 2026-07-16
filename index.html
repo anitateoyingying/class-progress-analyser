@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Progress Analyser</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<div id="gate" class="gate hidden">
+  <div class="gate-card">
+    <img src="logo.png" alt="" class="gate-logo">
+    <h1>Class Progress Analyser</h1>
+    <p>Enter the app password to continue.</p>
+    <form id="gate-form">
+      <input type="password" id="gate-input" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" id="gate-btn">Enter</button>
+    </form>
+    <p id="gate-error" class="gate-error hidden"></p>
+  </div>
+</div>
+
+<main id="app" class="hidden">
+  <header class="app-header">
+    <img src="logo.png" alt="Logo" class="header-logo">
+    <div>
+      <h1>Class Progress Analyser</h1>
+      <p class="subtitle">Upload Taidii class progress reports (.xlsx) to identify key learning concerns and get AI teaching strategies.</p>
+    </div>
+    <button id="lock-btn" class="ghost-btn" title="Lock the app">Lock</button>
+  </header>
+
+  <section id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload Excel files">
+    <input type="file" id="file-input" accept=".xlsx" multiple hidden>
+    <p><strong>Drop .xlsx files here</strong> or click to browse</p>
+    <p class="muted">Reports are parsed entirely in your browser — files never leave your device. Only anonymous objective statistics are sent for AI analysis.</p>
+  </section>
+
+  <div id="global-errors"></div>
+  <div id="cards"></div>
+
+  <footer class="app-footer">
+    <p class="muted">Analysis runs locally · Strategies by Google Gemini</p>
+  </footer>
+</main>
+
+<div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+
+<datalist id="centre-list"></datalist>
+<datalist id="class-list"></datalist>
+<datalist id="quarter-list"></datalist>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+# recovered legacy app — contains secrets, never commit
+_recovered/
+
+# real school reports — never commit data
+*.xlsx
+
+.DS_Store
+supabase/.temp/
