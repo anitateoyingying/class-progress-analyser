@@ -56,15 +56,17 @@ function buildPrompt(dim: Dimension): string {
     `education researcher. Dimension: "${dim.label}". Scoring tiers: 2 = the basics are in place, ` +
     `4 = happening centre-wide at the expected standard, 6 = high quality with clear results for children.` +
     `\n\nScored items:\n${itemsText}\n\n` +
-    `Write exactly ${dim.maxHighlight} highlight lines (strengths and/or gaps) for the Director. ` +
+    `Write exactly ${dim.maxHighlight} highlight lines (strengths and/or gaps) for the Director, in the style of ` +
+    `a real curriculum audit report: natural, flowing prose, not a rigid template. ` +
     `Prioritise the lowest-scoring items as gaps and the highest-scoring as strengths. ` +
-    `Each line should be 2-3 short, plain-English sentences: say what the item is and what the score means ` +
-    `in everyday terms (no jargon, no citing rubric codes or criteria word-for-word), then give 1-2 simple, ` +
-    `practical suggestions — for a Gap, one or two things the centre could do to improve it; for a Strength, ` +
-    `one or two ways to keep it up or build on it. Tone: professional, respectful, and supportive, as one ` +
-    `educator addressing another. Never sound condescending, sarcastic, judgmental, or preachy. Do not use ` +
-    `rhetorical questions, exclamation marks, or lecturing phrases like "it's important to note" or "simply". ` +
-    `State observations plainly and matter-of-factly. Start each line with "Strength - " or "Gap - ". ` +
+    `Each line is a short paragraph (2-4 sentences) describing what was observed for that item, in plain English ` +
+    `(no jargon, no citing rubric codes or criteria word-for-word). Only add a recommendation where one is genuinely ` +
+    `useful — introduce it naturally with a phrase like "Moving forward, ..." — and it is fine for a line to be ` +
+    `purely observational with no recommendation at all, especially for clear strengths. Do not force a fixed number ` +
+    `of suggestions per line. Do not start lines with a literal "Strength -" or "Gap -" label; let the content speak ` +
+    `for itself. Tone: professional, respectful, and supportive, as one educator addressing another. Never sound ` +
+    `condescending, sarcastic, judgmental, or preachy. Do not use rhetorical questions, exclamation marks, or ` +
+    `lecturing phrases like "it's important to note" or "simply". State observations plainly and matter-of-factly. ` +
     `Respond as JSON array of strings.`
   );
 }
@@ -116,7 +118,7 @@ async function callMistral(prompt: string, signal: AbortSignal): Promise<Provide
         role: "system",
         content:
           "You are an expert early-childhood curriculum auditor. Reply ONLY with JSON of the form " +
-          '{"lines":["Strength - ...", "Gap - ...", ...]}.',
+          '{"lines":["...", "...", ...]}.',
       },
       { role: "user", content: prompt },
     ],
