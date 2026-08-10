@@ -4,5 +4,10 @@ _recovered/
 # real school reports — never commit data
 *.xlsx
 
+# one-off sample data + generated reports for the curriculum audit tool
+report/
+
 .DS_Store
 supabase/.temp/
+__pycache__/
+.ruff_cache/

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curriculum Audit Analyser</title>
+<link rel="icon" href="../logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="audit.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="rainbow-strip" aria-hidden="true"></div>
+
+<div id="gate" class="gate hidden">
+  <div class="gate-card pop-in">
+    <img src="../logo.png" alt="" class="gate-logo">
+    <h1>Curriculum Audit Analyser</h1>
+    <p>Enter the app password to continue.</p>
+    <form id="gate-form">
+      <input type="password" id="gate-input" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" id="gate-btn">Enter</button>
+    </form>
+    <p id="gate-error" class="gate-error hidden"></p>
+  </div>
+</div>
+
+<main id="app" class="hidden">
+  <header class="app-header rise-1">
+    <img src="../logo.png" alt="Logo" class="header-logo">
+    <div>
+      <h1>Curriculum Audit Analyser</h1>
+      <p class="subtitle">Upload a completed CA Tool workbook to auto-score it and generate a Curriculum Audit Report.</p>
+    </div>
+    <a class="ghost-btn" id="back-link" href="../index.html">Class Analyser</a>
+    <button id="lock-btn" class="ghost-btn" title="Lock the app">Lock</button>
+  </header>
+
+  <section id="dropzone" class="dropzone rise-2" tabindex="0" role="button" aria-label="Upload CA Tool workbook">
+    <input type="file" id="file-input" accept=".xlsx" hidden>
+    <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 6 L24 30 M14 20 L24 30 L34 20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 34 L8 40 Q8 42 10 42 L38 42 Q40 42 40 40 L40 34" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p class="drop-title">Drop a CA Tool .xlsx here or click to browse</p>
+    <p class="muted">Expected sheets: Curriculum Management, Teaching &amp; Learning Practices, Early Years, Preschool. Parsed entirely in your browser; only scores and rubric text are sent for AI commentary.</p>
+  </section>
+
+  <div id="global-errors"></div>
+  <div id="cards"></div>
+
+  <footer class="app-footer">
+    <p class="muted">Copyright 2025-2026 Anita Teo</p>
+  </footer>
+</main>
+
+<div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+
+</body>
+</html>

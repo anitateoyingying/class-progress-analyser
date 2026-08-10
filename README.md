@@ -5,6 +5,11 @@ that need the most attention and get AI-generated teaching strategies.
 
 **Live app:** https://anitateoyingying.github.io/class-progress-analyser/
 
+**Also on this site:** [Curriculum Audit Analyser](./audit/) — upload a completed
+CA Tool workbook to auto-score it against the audit rubric and generate a
+Curriculum Audit Report (with AI-drafted strength/gap commentary) as a downloadable
+Word document.
+
 ## How it works
 
 - The Excel file is parsed **entirely in your browser** (SheetJS), so student
@@ -34,6 +39,10 @@ Google Gemini (gemini-2.5-flash, structured JSON output)
 npx supabase functions deploy class-analyser --project-ref <ref> --no-verify-jwt
 npx supabase secrets set CLASS_ANALYSER_PASSWORD=<password> --project-ref <ref>
 # GEMINI_API_KEY must also be set as a secret
+
+# Curriculum Audit Analyser (audit/) uses its own function + password:
+npx supabase functions deploy curriculum-audit --project-ref <ref> --no-verify-jwt
+npx supabase secrets set CURRICULUM_AUDIT_PASSWORD=<password> --project-ref <ref>
 ```
 
 ## Local development
