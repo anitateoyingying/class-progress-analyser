@@ -52,17 +52,17 @@ function buildPrompt(dim: Dimension): string {
     .map((it) => `${it.no} ${it.title} - scored ${it.score}/6. Criteria: ${it.criteria.join(" | ")}`)
     .join("\n");
   return (
-    `You are an expert early-childhood curriculum auditor writing a report for a Centre Director. ` +
-    `Dimension: "${dim.label}". Scoring tiers: 2 = foundational structures in place, ` +
-    `4 = centre-wide delivery at brand expectations (~75%), 6 = high-quality, data-informed implementation ` +
-    `with visible outcomes.\n\nScored items:\n${itemsText}\n\n` +
-    `Write exactly ${dim.maxHighlight} highlight lines (strengths and/or gaps) that the Centre Director ` +
-    `should be aware of, prioritising the lowest-scoring items as gaps and the highest-scoring as strengths. ` +
-    `Each line must be 2-4 sentences, like an auditor's note (specific, evidence-based, never generic): ` +
-    `name the exact item(s) and criteria that justify the rating, explain why it matters for children's ` +
-    `learning outcomes, then end with 1-2 concrete, actionable suggestions — for a Gap, how the centre can ` +
-    `close it; for a Strength, how to sustain or extend it further. Start each line with "Strength - " or ` +
-    `"Gap - ". Respond as JSON array of strings.`
+    `You are writing a curriculum audit report for a preschool Centre Director who is busy and not an ` +
+    `education researcher. Dimension: "${dim.label}". Scoring tiers: 2 = the basics are in place, ` +
+    `4 = happening centre-wide at the expected standard, 6 = high quality with clear results for children.` +
+    `\n\nScored items:\n${itemsText}\n\n` +
+    `Write exactly ${dim.maxHighlight} highlight lines (strengths and/or gaps) for the Director. ` +
+    `Prioritise the lowest-scoring items as gaps and the highest-scoring as strengths. ` +
+    `Each line should be 2-3 short, plain-English sentences: say what the item is and what the score means ` +
+    `in everyday terms (no jargon, no citing rubric codes or criteria word-for-word), then give 1-2 simple, ` +
+    `practical suggestions — for a Gap, one or two things the centre could do to improve it; for a Strength, ` +
+    `one or two ways to keep it up or build on it. Write like you're talking to the Director in person, not ` +
+    `like an academic report. Start each line with "Strength - " or "Gap - ". Respond as JSON array of strings.`
   );
 }
 
