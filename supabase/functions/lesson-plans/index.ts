@@ -47,6 +47,7 @@ interface Lesson {
   dispositionName: string;
   dispositionDescription: string;
   objectiveCodes: string[];
+  objectiveApplications: string[];
   objectives: string[];
   materials: string[];
   be: string[];
@@ -71,6 +72,7 @@ function buildLessonSchema(validCodes: string[]) {
       dispositionName: { type: "STRING" },
       dispositionDescription: { type: "STRING" },
       objectiveCodes: { type: "ARRAY", items: { type: "STRING", enum: validCodes }, minItems: 2, maxItems: 2 },
+      objectiveApplications: { type: "ARRAY", items: { type: "STRING" }, minItems: 2, maxItems: 2 },
       materials: { type: "ARRAY", items: { type: "STRING" } },
       be: { type: "ARRAY", items: { type: "STRING" } },
       do: { type: "ARRAY", items: { type: "STRING" } },
@@ -79,7 +81,7 @@ function buildLessonSchema(validCodes: string[]) {
     },
     required: [
       "topic", "topicDefinition", "topicConcept", "duration", "learningDomains",
-      "dispositionName", "dispositionDescription", "objectiveCodes", "materials",
+      "dispositionName", "dispositionDescription", "objectiveCodes", "objectiveApplications", "materials",
       "be", "do", "reflect", "act",
     ],
   };
@@ -91,6 +93,9 @@ function isRawLesson(v: unknown): v is RawLesson {
   return typeof l.topic === "string" && Array.isArray(l.objectiveCodes) && Array.isArray(l.be);
 }
 
+const genericApplicationFallback = (o: LearningOutcome, language: "English" | "Chinese"): string =>
+  language === "Chinese" ? o.zh : o.en;
+
 function extractLessons(value: unknown): RawLesson[] | null {
   let arr: unknown = value;
   if (arr && !Array.isArray(arr) && typeof arr === "object") {
@@ -101,30 +106,36 @@ function extractLessons(value: unknown): RawLesson[] | null {
   return lessons.length > 0 ? lessons : null;
 }
 
-// Never trust codes the AI emits at face value -- keep only ones that exist in the
-// authoritative registry, and deterministically backfill any that are missing/invalid
-// so every lesson always ends up with exactly 2 real, correctly-worded outcomes.
+// Never trust codes (or their tailored write-ups) the AI emits at face value -- keep only
+// codes that exist in the authoritative registry, pairing each with the AI's lesson-specific
+// application text where it supplied one, and deterministically backfill anything missing/invalid
+// (falling back to the registry's own wording) so every lesson always ends up with exactly 2
+// real outcomes.
 function resolveObjectives(lesson: RawLesson, catalogue: LearningOutcome[], language: "English" | "Chinese"): Lesson {
   const byCode = new Map(catalogue.map((o) => [o.code, o]));
   const seen = new Set<string>();
-  const resolved: LearningOutcome[] = [];
-  for (const code of lesson.objectiveCodes || []) {
+  const resolved: { outcome: LearningOutcome; application: string }[] = [];
+  const rawCodes = lesson.objectiveCodes || [];
+  const rawApplications = lesson.objectiveApplications || [];
+  rawCodes.forEach((code, i) => {
     const outcome = byCode.get(code);
-    if (outcome && !seen.has(outcome.code)) {
-      resolved.push(outcome);
-      seen.add(outcome.code);
-    }
-  }
+    if (!outcome || seen.has(outcome.code)) return;
+    const application = typeof rawApplications[i] === "string" && rawApplications[i].trim()
+      ? rawApplications[i].trim()
+      : genericApplicationFallback(outcome, language);
+    resolved.push({ outcome, application });
+    seen.add(outcome.code);
+  });
   let fallbackIdx = 0;
   while (resolved.length < 2 && fallbackIdx < catalogue.length) {
     const candidate = catalogue[fallbackIdx++];
     if (!seen.has(candidate.code)) {
-      resolved.push(candidate);
+      resolved.push({ outcome: candidate, application: genericApplicationFallback(candidate, language) });
       seen.add(candidate.code);
     }
   }
-  const objectives = resolved.map((o) => `${language === "Chinese" ? o.zh : o.en} (${o.code})`);
-  return { ...lesson, objectiveCodes: resolved.map((o) => o.code), objectives };
+  const objectives = resolved.map((r) => `${r.application} (${r.outcome.code})`);
+  return { ...lesson, objectiveCodes: resolved.map((r) => r.outcome.code), objectives };
 }
 
 function themedLessonInstructions(req: LessonRequest): string {
@@ -172,6 +183,10 @@ function buildPrompt(req: LessonRequest, catalogue: LearningOutcome[]): string {
     `- objectiveCodes: pick exactly 2 codes from the official learning outcome list below that this lesson ` +
     `actually addresses. Only use codes from this list, copied exactly as written -- never invent or modify a ` +
     `code:\n${catalogueText}\n\n` +
+    `- objectiveApplications: exactly 2 entries, in the same order as objectiveCodes. For each code, write ONE ` +
+    `sentence describing how THIS specific activity puts that outcome into practice -- reference the actual ` +
+    `materials or steps of this lesson. Do not copy or paraphrase the official outcome wording from the list above; ` +
+    `that wording is shown only so you pick the right code, never repeat it back\n` +
     `- materials: 2-5 simple, realistic classroom materials\n` +
     `- be: 2-4 short lines for the lesson's introduction/hook (5-10 minutes), written as an activity description ` +
     `followed by facilitation dialogue lines a teacher would say\n` +
@@ -221,7 +236,7 @@ async function callGemini(key: string, model: string, prompt: string, validCodes
 }
 
 async function callMistral(prompt: string, count: number, signal: AbortSignal): Promise<ProviderResult> {
-  prompt += `\n\nRespond ONLY with JSON of the form {"lessons":[{...lesson object with an "objectiveCodes" array of exactly 2 codes copied verbatim from the list above...}, ...]}.`;
+  prompt += `\n\nRespond ONLY with JSON of the form {"lessons":[{...lesson object with an "objectiveCodes" array of exactly 2 codes copied verbatim from the list above, and an "objectiveApplications" array of exactly 2 tailored sentences (not copied from the official wording) in the same order...}, ...]}.`;
   const body = {
     model: "mistral-small-latest",
     temperature: 0.6,
