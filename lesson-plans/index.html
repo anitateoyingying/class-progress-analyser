@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson Plan Generator</title>
+<link rel="icon" href="../logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="lesson-plans.css">
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="rainbow-strip" aria-hidden="true"></div>
+
+<div id="gate" class="gate hidden">
+  <div class="gate-card pop-in">
+    <img src="../logo.png" alt="" class="gate-logo">
+    <h1>Lesson Plan Generator</h1>
+    <p>Enter the app password to continue.</p>
+    <form id="gate-form">
+      <input type="password" id="gate-input" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" id="gate-btn">Enter</button>
+    </form>
+    <p id="gate-error" class="gate-error hidden"></p>
+  </div>
+</div>
+
+<main id="app" class="hidden">
+  <header class="app-header rise-1">
+    <img src="../logo.png" alt="Logo" class="header-logo">
+    <div>
+      <h1>Lesson Plan Generator</h1>
+      <p class="subtitle">Choose a level, language and topic to generate ready-to-teach lesson plans.</p>
+    </div>
+    <a class="ghost-btn" id="back-link" href="../index.html">Class Analyser</a>
+    <button id="lock-btn" class="ghost-btn" title="Lock the app">Lock</button>
+  </header>
+
+  <section class="lp-form rise-2">
+    <div class="meta-row">
+      <label>Level
+        <select id="level-select"></select>
+      </label>
+      <label>Language
+        <select id="language-select">
+          <option value="English">English</option>
+          <option value="Chinese">Chinese (Simplified)</option>
+        </select>
+      </label>
+      <label>Number of lessons
+        <select id="count-select"></select>
+      </label>
+    </div>
+    <label class="topic-label">Topic / core value
+      <input type="text" id="topic-input" placeholder="e.g. Gratitude, Sharing, Orderliness, Perseverance" maxlength="200">
+    </label>
+    <button id="generate-btn">Generate lesson plans</button>
+  </section>
+
+  <div id="global-errors"></div>
+  <div id="results"></div>
+
+  <footer class="app-footer">
+    <p class="muted">Copyright 2025-2026 Anita Teo</p>
+  </footer>
+</main>
+
+</body>
+</html>

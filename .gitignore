@@ -7,6 +7,9 @@ _recovered/
 # one-off sample data + generated reports for the curriculum audit tool
 report/
 
+# sample reference docx used to design the lesson-plans tool — not needed at runtime
+lesson-plans/*.docx
+
 .DS_Store
 supabase/.temp/
 __pycache__/

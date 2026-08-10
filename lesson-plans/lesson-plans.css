@@ -1,0 +1,98 @@
+/* Lesson Plan Generator: extra styles layered on top of ../styles.css */
+
+#back-link {
+  margin-left: auto;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 999px;
+  padding: 0.65rem 1.35rem;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+}
+#back-link:hover { background: var(--surface-2); transform: translateY(-2px); }
+#lock-btn { margin-left: 0.6rem; }
+
+.lp-form {
+  background: var(--surface-1);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.4rem;
+}
+.lp-form .meta-row { margin: 0 0 1rem; }
+.lp-form .meta-row select {
+  width: 100%;
+  appearance: none;
+  padding: 0.55rem 2.2rem 0.55rem 0.75rem;
+  border: 2px solid var(--baseline);
+  border-radius: 12px;
+  background-color: var(--page);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23a08f7c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  color: var(--text-primary);
+  font-size: 0.93rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.lp-form .meta-row select:hover, .lp-form .meta-row select:focus { border-color: var(--accent-deep); outline: none; }
+.topic-label {
+  display: flex; flex-direction: column; gap: 0.25rem;
+  font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);
+  margin-bottom: 1.1rem;
+}
+.topic-label input {
+  padding: 0.6rem 0.85rem;
+  border: 2px solid var(--baseline);
+  border-radius: 12px;
+  background: var(--page);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+}
+.topic-label input:focus { outline: none; border-color: var(--accent-deep); }
+
+/* ===== result cards ===== */
+.level-group { margin-top: 1.6rem; }
+.level-group h2 { font-size: 1.15rem; margin: 0 0 0.8rem; font-weight: 600; }
+.lesson-card {
+  background: var(--surface-1);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.4rem;
+  margin-bottom: 1.1rem;
+  position: relative;
+  overflow: hidden;
+}
+.lesson-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--confetti-1), var(--confetti-4), var(--confetti-2), var(--confetti-3));
+}
+.lesson-card h3 { font-size: 1.05rem; margin: 0.2rem 0 0.3rem; font-weight: 700; }
+.lesson-meta { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.7rem; }
+.lesson-meta strong { color: var(--text-primary); }
+.lesson-section { margin: 0.7rem 0; }
+.lesson-section h4 {
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--accent-ink); margin: 0 0 0.3rem; font-weight: 800;
+}
+.lesson-section ul { margin: 0; padding-left: 1.25rem; font-size: 0.92rem; }
+.lesson-section ul li { margin-bottom: 0.3rem; }
+.lesson-section p { margin: 0; font-size: 0.92rem; }
+
+.level-actions { display: flex; gap: 0.7rem; margin-top: 0.5rem; flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .app-header { flex-wrap: wrap; }
+}

@@ -5,10 +5,13 @@ that need the most attention and get AI-generated teaching strategies.
 
 **Live app:** https://anitateoyingying.github.io/class-progress-analyser/
 
-**Also on this site:** [Curriculum Audit Analyser](./audit/) — upload a completed
-CA Tool workbook to auto-score it against the audit rubric and generate a
-Curriculum Audit Report (with AI-drafted strength/gap commentary) as a downloadable
-Word document.
+**Also on this site:**
+- [Curriculum Audit Analyser](./audit/) — upload a completed CA Tool workbook to
+  auto-score it against the audit rubric and generate a Curriculum Audit Report
+  (with AI-drafted strength/gap commentary) as a downloadable Word document.
+- [Lesson Plan Generator](./lesson-plans/) — choose a level, language and topic
+  to AI-generate ready-to-teach lesson plans, exported as individual Word
+  documents per level + language.
 
 ## How it works
 
@@ -43,6 +46,10 @@ npx supabase secrets set CLASS_ANALYSER_PASSWORD=<password> --project-ref <ref>
 # Curriculum Audit Analyser (audit/) uses its own function + password:
 npx supabase functions deploy curriculum-audit --project-ref <ref> --no-verify-jwt
 npx supabase secrets set CURRICULUM_AUDIT_PASSWORD=<password> --project-ref <ref>
+
+# Lesson Plan Generator (lesson-plans/) uses its own function + password:
+npx supabase functions deploy lesson-plans --project-ref <ref> --no-verify-jwt
+npx supabase secrets set LESSON_PLANS_PASSWORD=<password> --project-ref <ref>
 ```
 
 ## Local development
