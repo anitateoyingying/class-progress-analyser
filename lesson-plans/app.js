@@ -114,6 +114,8 @@ async function fetchLessons(request) {
 $("#generate-btn").addEventListener("click", async () => {
   const topic = $("#topic-input").value.trim();
   if (!topic) { globalError("Please enter a topic or core value."); return; }
+  const envTopic = $("#env-topic-input").value.trim();
+  const festivalTopic = $("#festival-topic-input").value.trim();
 
   const lvl = LEVELS.find((l) => l.key === levelSelect.value);
   const language = languageSelect.value;
@@ -129,6 +131,8 @@ $("#generate-btn").addEventListener("click", async () => {
       levelLabel: lvl.label,
       eyloPrefix: lvl.eyloPrefix,
       topic,
+      envTopic: envTopic || undefined,
+      festivalTopic: festivalTopic || undefined,
       language,
       count,
     });

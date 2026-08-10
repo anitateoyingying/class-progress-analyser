@@ -26,6 +26,8 @@ interface LessonRequest {
   levelLabel: string;
   eyloPrefix: string;
   topic: string;
+  envTopic?: string;
+  festivalTopic?: string;
   language: "English" | "Chinese";
   count: number;
 }
@@ -88,6 +90,23 @@ function extractLessons(value: unknown): Lesson[] | null {
   return lessons.length > 0 ? lessons : null;
 }
 
+function themedLessonInstructions(req: LessonRequest): string {
+  const themes = [
+    req.envTopic && `the environment/sustainability theme "${req.envTopic}"`,
+    req.festivalTopic && `the festival or special-event theme "${req.festivalTopic}"`,
+  ].filter(Boolean) as string[];
+  if (!themes.length) return "";
+  // Assign later lessons to themes (lesson 1 stays on the main topic when there's room) so the
+  // batch still reads as one coherent, progressive unit rather than opening on a tangent.
+  const startSlot = req.count > themes.length ? 2 : 1;
+  return " " + themes
+    .map((theme, i) => {
+      const slot = Math.min(startSlot + i, req.count);
+      return `Lesson ${slot} must be built around ${theme}, while still fitting the overall unit and using the same level and language.`;
+    })
+    .join(" ");
+}
+
 function buildPrompt(req: LessonRequest): string {
   const langInstruction = req.language === "Chinese"
     ? `Write ALL text content (topic, definitions, objectives, dialogue, etc.) in Simplified Chinese. ` +
@@ -99,7 +118,8 @@ function buildPrompt(req: LessonRequest): string {
     `following the NEL (Nurturing Early Learners) framework. ` +
     `Level: ${req.levelLabel}. Core value / topic focus: "${req.topic}". ${langInstruction}\n\n` +
     `Generate exactly ${req.count} distinct, sequential lesson plans on this topic for this level, each with ` +
-    `a different activity angle so they build on each other across a term. Every lesson must include:\n` +
+    `a different activity angle so they build on each other across a term.${themedLessonInstructions(req)} ` +
+    `Every lesson must include:\n` +
     `- topic: a short activity title\n` +
     `- topicDefinition: one sentence, child-friendly framing of the topic\n` +
     `- topicConcept: 2-3 sentences explaining the concept simply for young children\n` +
@@ -231,6 +251,8 @@ Deno.serve(async (req) => {
     levelLabel: r.levelLabel.slice(0, 100),
     eyloPrefix: String(r.eyloPrefix || "EY").slice(0, 20),
     topic: r.topic.trim().slice(0, 200),
+    envTopic: typeof r.envTopic === "string" && r.envTopic.trim() ? r.envTopic.trim().slice(0, 200) : undefined,
+    festivalTopic: typeof r.festivalTopic === "string" && r.festivalTopic.trim() ? r.festivalTopic.trim().slice(0, 200) : undefined,
     language: r.language,
     count,
   };
