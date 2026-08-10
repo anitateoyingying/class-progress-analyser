@@ -129,6 +129,7 @@ $("#generate-btn").addEventListener("click", async () => {
   try {
     batch.lessons = await fetchLessons({
       levelLabel: lvl.label,
+      levelKey: lvl.key,
       eyloPrefix: lvl.eyloPrefix,
       topic,
       envTopic: envTopic || undefined,

@@ -2,6 +2,8 @@
 // Same provider-pool pattern as supabase/functions/class-analyser and
 // curriculum-audit: walks gemini-2.5-flash -> gemini-2.5-flash-lite -> mistral-small.
 
+import { LEARNING_OUTCOMES, type LearningOutcome } from "./learning-outcomes.ts";
+
 const APP_PASSWORD = Deno.env.get("LESSON_PLANS_PASSWORD") || "";
 const GEMINI_KEYS = [
   ...(Deno.env.get("CLASS_ANALYSER_GEMINI_KEYS") || "").split(",").map((k) => k.trim()).filter(Boolean),
@@ -22,8 +24,12 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+const LEVEL_KEYS = ["pg", "pn", "nursery", "k1", "k2"] as const;
+type LevelKey = (typeof LEVEL_KEYS)[number];
+
 interface LessonRequest {
   levelLabel: string;
+  levelKey: LevelKey;
   eyloPrefix: string;
   topic: string;
   envTopic?: string;
@@ -40,6 +46,7 @@ interface Lesson {
   learningDomains: string[];
   dispositionName: string;
   dispositionDescription: string;
+  objectiveCodes: string[];
   objectives: string[];
   materials: string[];
   be: string[];
@@ -48,46 +55,76 @@ interface Lesson {
   act: string[];
 }
 
-type ProviderResult = { lessons: Lesson[] } | { error: string; quota?: boolean };
+type RawLesson = Omit<Lesson, "objectives">;
 
-const LESSON_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    topic: { type: "STRING" },
-    topicDefinition: { type: "STRING" },
-    topicConcept: { type: "STRING" },
-    duration: { type: "STRING" },
-    learningDomains: { type: "ARRAY", items: { type: "STRING" } },
-    dispositionName: { type: "STRING" },
-    dispositionDescription: { type: "STRING" },
-    objectives: { type: "ARRAY", items: { type: "STRING" } },
-    materials: { type: "ARRAY", items: { type: "STRING" } },
-    be: { type: "ARRAY", items: { type: "STRING" } },
-    do: { type: "ARRAY", items: { type: "STRING" } },
-    reflect: { type: "ARRAY", items: { type: "STRING" } },
-    act: { type: "ARRAY", items: { type: "STRING" } },
-  },
-  required: [
-    "topic", "topicDefinition", "topicConcept", "duration", "learningDomains",
-    "dispositionName", "dispositionDescription", "objectives", "materials",
-    "be", "do", "reflect", "act",
-  ],
-};
+type ProviderResult = { lessons: RawLesson[] } | { error: string; quota?: boolean };
 
-function isLesson(v: unknown): v is Lesson {
-  if (!v || typeof v !== "object") return false;
-  const l = v as Record<string, unknown>;
-  return typeof l.topic === "string" && Array.isArray(l.objectives) && Array.isArray(l.be);
+function buildLessonSchema(validCodes: string[]) {
+  return {
+    type: "OBJECT",
+    properties: {
+      topic: { type: "STRING" },
+      topicDefinition: { type: "STRING" },
+      topicConcept: { type: "STRING" },
+      duration: { type: "STRING" },
+      learningDomains: { type: "ARRAY", items: { type: "STRING" } },
+      dispositionName: { type: "STRING" },
+      dispositionDescription: { type: "STRING" },
+      objectiveCodes: { type: "ARRAY", items: { type: "STRING", enum: validCodes }, minItems: 2, maxItems: 2 },
+      materials: { type: "ARRAY", items: { type: "STRING" } },
+      be: { type: "ARRAY", items: { type: "STRING" } },
+      do: { type: "ARRAY", items: { type: "STRING" } },
+      reflect: { type: "ARRAY", items: { type: "STRING" } },
+      act: { type: "ARRAY", items: { type: "STRING" } },
+    },
+    required: [
+      "topic", "topicDefinition", "topicConcept", "duration", "learningDomains",
+      "dispositionName", "dispositionDescription", "objectiveCodes", "materials",
+      "be", "do", "reflect", "act",
+    ],
+  };
 }
 
-function extractLessons(value: unknown): Lesson[] | null {
+function isRawLesson(v: unknown): v is RawLesson {
+  if (!v || typeof v !== "object") return false;
+  const l = v as Record<string, unknown>;
+  return typeof l.topic === "string" && Array.isArray(l.objectiveCodes) && Array.isArray(l.be);
+}
+
+function extractLessons(value: unknown): RawLesson[] | null {
   let arr: unknown = value;
   if (arr && !Array.isArray(arr) && typeof arr === "object") {
     arr = Object.values(arr).find((v) => Array.isArray(v));
   }
   if (!Array.isArray(arr)) return null;
-  const lessons = arr.filter(isLesson);
+  const lessons = arr.filter(isRawLesson);
   return lessons.length > 0 ? lessons : null;
+}
+
+// Never trust codes the AI emits at face value -- keep only ones that exist in the
+// authoritative registry, and deterministically backfill any that are missing/invalid
+// so every lesson always ends up with exactly 2 real, correctly-worded outcomes.
+function resolveObjectives(lesson: RawLesson, catalogue: LearningOutcome[], language: "English" | "Chinese"): Lesson {
+  const byCode = new Map(catalogue.map((o) => [o.code, o]));
+  const seen = new Set<string>();
+  const resolved: LearningOutcome[] = [];
+  for (const code of lesson.objectiveCodes || []) {
+    const outcome = byCode.get(code);
+    if (outcome && !seen.has(outcome.code)) {
+      resolved.push(outcome);
+      seen.add(outcome.code);
+    }
+  }
+  let fallbackIdx = 0;
+  while (resolved.length < 2 && fallbackIdx < catalogue.length) {
+    const candidate = catalogue[fallbackIdx++];
+    if (!seen.has(candidate.code)) {
+      resolved.push(candidate);
+      seen.add(candidate.code);
+    }
+  }
+  const objectives = resolved.map((o) => `${language === "Chinese" ? o.zh : o.en} (${o.code})`);
+  return { ...lesson, objectiveCodes: resolved.map((o) => o.code), objectives };
 }
 
 function themedLessonInstructions(req: LessonRequest): string {
@@ -107,11 +144,14 @@ function themedLessonInstructions(req: LessonRequest): string {
     .join(" ");
 }
 
-function buildPrompt(req: LessonRequest): string {
+function buildPrompt(req: LessonRequest, catalogue: LearningOutcome[]): string {
   const langInstruction = req.language === "Chinese"
-    ? `Write ALL text content (topic, definitions, objectives, dialogue, etc.) in Simplified Chinese. ` +
-      `Keep learning outcome codes in the original English/alphanumeric format (e.g. "${req.eyloPrefix}.SED.3.1").`
+    ? `Write ALL text content (topic, definitions, objectives, dialogue, etc.) in Simplified Chinese.`
     : `Write all text content in English.`;
+
+  const catalogueText = catalogue
+    .map((o) => `${o.code}: ${o.en}`)
+    .join("\n");
 
   return (
     `You are an expert early-childhood curriculum writer creating lesson plans for a Singapore preschool, ` +
@@ -129,8 +169,9 @@ function buildPrompt(req: LessonRequest): string {
     `- dispositionName: one P.R.A.I.S.E. disposition (Perseverance, Reflectiveness, Appreciation, Inventiveness, ` +
     `Sense of Wonder & Curiosity, Enthusiasm) relevant to this lesson\n` +
     `- dispositionDescription: one sentence describing what that disposition looks like in this lesson\n` +
-    `- objectives: 2 lesson objectives, each ending with a learning outcome code like "(${req.eyloPrefix}.SED.3.1)" ` +
-    `using a plausible domain abbreviation and numbering\n` +
+    `- objectiveCodes: pick exactly 2 codes from the official learning outcome list below that this lesson ` +
+    `actually addresses. Only use codes from this list, copied exactly as written -- never invent or modify a ` +
+    `code:\n${catalogueText}\n\n` +
     `- materials: 2-5 simple, realistic classroom materials\n` +
     `- be: 2-4 short lines for the lesson's introduction/hook (5-10 minutes), written as an activity description ` +
     `followed by facilitation dialogue lines a teacher would say\n` +
@@ -143,14 +184,14 @@ function buildPrompt(req: LessonRequest): string {
   );
 }
 
-async function callGemini(key: string, model: string, prompt: string, count: number, signal: AbortSignal): Promise<ProviderResult> {
+async function callGemini(key: string, model: string, prompt: string, validCodes: string[], count: number, signal: AbortSignal): Promise<ProviderResult> {
   const body = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.6,
       maxOutputTokens: 8192,
       responseMimeType: "application/json",
-      responseSchema: { type: "ARRAY", items: LESSON_SCHEMA },
+      responseSchema: { type: "ARRAY", items: buildLessonSchema(validCodes) },
     },
   };
   try {
@@ -180,6 +221,7 @@ async function callGemini(key: string, model: string, prompt: string, count: num
 }
 
 async function callMistral(prompt: string, count: number, signal: AbortSignal): Promise<ProviderResult> {
+  prompt += `\n\nRespond ONLY with JSON of the form {"lessons":[{...lesson object with an "objectiveCodes" array of exactly 2 codes copied verbatim from the list above...}, ...]}.`;
   const body = {
     model: "mistral-small-latest",
     temperature: 0.6,
@@ -246,9 +288,13 @@ Deno.serve(async (req) => {
   if (r.language !== "English" && r.language !== "Chinese") {
     return json({ error: "Malformed language" }, 400);
   }
+  if (!LEVEL_KEYS.includes(r.levelKey)) {
+    return json({ error: "Malformed level key" }, 400);
+  }
   const count = Math.min(Math.max(Number(r.count) || 4, 1), 6);
   const request: LessonRequest = {
     levelLabel: r.levelLabel.slice(0, 100),
+    levelKey: r.levelKey,
     eyloPrefix: String(r.eyloPrefix || "EY").slice(0, 20),
     topic: r.topic.trim().slice(0, 200),
     envTopic: typeof r.envTopic === "string" && r.envTopic.trim() ? r.envTopic.trim().slice(0, 200) : undefined,
@@ -257,14 +303,18 @@ Deno.serve(async (req) => {
     count,
   };
 
-  const prompt = buildPrompt(request);
+  const catalogue = LEARNING_OUTCOMES[request.levelKey];
+  const validCodes = catalogue.map((o) => o.code);
+  const prompt = buildPrompt(request, catalogue);
+  const finalize = (lessons: RawLesson[]): Lesson[] =>
+    lessons.map((l) => resolveObjectives(l, catalogue, request.language));
 
   const attempts: Array<{ label: string; run: (signal: AbortSignal) => Promise<ProviderResult> }> = [];
   for (const model of GEMINI_MODELS) {
     GEMINI_KEYS.forEach((key, k) => {
       attempts.push({
         label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
-        run: (signal) => callGemini(key, model, prompt, count, signal),
+        run: (signal) => callGemini(key, model, prompt, validCodes, count, signal),
       });
     });
   }
@@ -281,14 +331,14 @@ Deno.serve(async (req) => {
     for (const attempt of pool) {
       const result = await attempt.run(controller.signal);
       if ("lessons" in result) {
-        return json({ lessons: result.lessons, model: attempt.label, fallbacksUsed: failures });
+        return json({ lessons: finalize(result.lessons), model: attempt.label, fallbacksUsed: failures });
       }
       failures.push(`${attempt.label}: ${result.error}`);
       if (!result.quota) {
         await new Promise((r) => setTimeout(r, 1500));
         const retry = await attempt.run(controller.signal);
         if ("lessons" in retry) {
-          return json({ lessons: retry.lessons, model: attempt.label, fallbacksUsed: failures });
+          return json({ lessons: finalize(retry.lessons), model: attempt.label, fallbacksUsed: failures });
         }
         failures.push(`${attempt.label} (retry): ${retry.error}`);
       }
