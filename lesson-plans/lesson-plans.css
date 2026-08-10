@@ -1,21 +1,5 @@
 /* Lesson Plan Generator: extra styles layered on top of ../styles.css */
 
-#back-link {
-  margin-left: auto;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.95rem;
-  font-weight: 500;
-  font-family: inherit;
-  border-radius: 999px;
-  padding: 0.65rem 1.35rem;
-  cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
-}
-#back-link:hover { background: var(--surface-2); transform: translateY(-2px); }
-#lock-btn { margin-left: 0.6rem; }
-
 .lp-form {
   background: var(--surface-1);
   border: 2px solid var(--border);

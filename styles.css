@@ -181,7 +181,32 @@ main { max-width: 880px; margin: 0 auto; padding: 2rem 1rem 3rem; }
 .header-logo:hover { animation: wiggle 0.5s ease-in-out; }
 .app-header h1 { font-size: 1.7rem; margin: 0; font-weight: 600; letter-spacing: 0.2px; }
 .subtitle { color: var(--text-secondary); margin: 0.2rem 0 0; font-size: 0.93rem; }
-#lock-btn { margin-left: auto; flex-shrink: 0; }
+#lock-btn { margin-left: 0.6rem; flex-shrink: 0; }
+
+/* ===== site nav (shared across all 3 tools) ===== */
+.site-nav { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.site-nav-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  border: 2px solid var(--baseline);
+  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s, background 0.12s, color 0.12s;
+}
+.site-nav-link:hover { background: var(--surface-2); transform: translateY(-2px); }
+.site-nav-link.active {
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 0 var(--accent-ink);
+}
 
 /* ===== dropzone ===== */
 .dropzone {
