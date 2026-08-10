@@ -61,8 +61,11 @@ function buildPrompt(dim: Dimension): string {
     `Each line should be 2-3 short, plain-English sentences: say what the item is and what the score means ` +
     `in everyday terms (no jargon, no citing rubric codes or criteria word-for-word), then give 1-2 simple, ` +
     `practical suggestions — for a Gap, one or two things the centre could do to improve it; for a Strength, ` +
-    `one or two ways to keep it up or build on it. Write like you're talking to the Director in person, not ` +
-    `like an academic report. Start each line with "Strength - " or "Gap - ". Respond as JSON array of strings.`
+    `one or two ways to keep it up or build on it. Tone: professional, respectful, and supportive, as one ` +
+    `educator addressing another. Never sound condescending, sarcastic, judgmental, or preachy. Do not use ` +
+    `rhetorical questions, exclamation marks, or lecturing phrases like "it's important to note" or "simply". ` +
+    `State observations plainly and matter-of-factly. Start each line with "Strength - " or "Gap - ". ` +
+    `Respond as JSON array of strings.`
   );
 }
 
