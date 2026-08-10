@@ -34,6 +34,9 @@ const DIMENSIONS = [
   },
 ];
 
+const CENTRES = ["Cecil", "Commonwealth", "Compassvale", "Gambas", "Jurong West",
+  "Kallang", "Sengkang", "Thomson", "Upper Serangoon"];
+
 const TIER_LABEL = {
   2: "foundational (structures in place)",
   4: "centre-wide delivery at Brand expectations (~75%)",
@@ -196,7 +199,7 @@ async function addFiles(fileList) {
       continue;
     }
     const id = String(nextId++);
-    const entry = { id, name: file.name, size: file.size, dims: null, commentary: {}, error: null, busy: false };
+    const entry = { id, name: file.name, size: file.size, dims: null, commentary: {}, error: null, busy: false, meta: { centre: "", assessor: "" } };
     files.set(id, entry);
     try {
       const buf = await file.arrayBuffer();
@@ -271,6 +274,32 @@ function renderCard(entry) {
     card.appendChild(el("div", "error-banner", entry.error));
     return;
   }
+
+  const metaRow = el("div", "meta-row");
+  const centreLabel = el("label", null, "Centre");
+  const centreSelect = el("select");
+  const placeholder = el("option", null, "Select centre");
+  placeholder.value = "";
+  centreSelect.appendChild(placeholder);
+  for (const c of CENTRES) {
+    const opt = el("option", null, c);
+    opt.value = c;
+    centreSelect.appendChild(opt);
+  }
+  centreSelect.value = entry.meta.centre || "";
+  centreSelect.addEventListener("change", () => { entry.meta.centre = centreSelect.value; });
+  centreLabel.appendChild(centreSelect);
+  metaRow.appendChild(centreLabel);
+
+  const assessorLabel = el("label", null, "Assessor(s)");
+  const assessorInput = el("input");
+  assessorInput.type = "text";
+  assessorInput.placeholder = "e.g. Jane Tan";
+  assessorInput.value = entry.meta.assessor || "";
+  assessorInput.addEventListener("input", () => { entry.meta.assessor = assessorInput.value; });
+  assessorLabel.appendChild(assessorInput);
+  metaRow.appendChild(assessorLabel);
+  card.appendChild(metaRow);
 
   card.appendChild(tierLegend());
 
@@ -414,7 +443,7 @@ async function downloadDocx(entry) {
     new Paragraph({ text: "Curriculum Audit Report", heading: HeadingLevel.HEADING_1 }),
     new Paragraph(`Centre: ${entry.meta?.centre || "[Centre Name]"}`),
     new Paragraph(`Date audited: ${new Date().toISOString().slice(0, 10)}`),
-    new Paragraph(`Assessor(s): [Assessor Name(s)]`),
+    new Paragraph(`Assessor(s): ${entry.meta?.assessor || "[Assessor Name(s)]"}`),
     new Paragraph(""),
     new Table({ rows: [headerRow, ...bodyRows], width: { size: 100, type: WidthType.PERCENTAGE } }),
     new Paragraph({

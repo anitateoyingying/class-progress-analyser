@@ -1,7 +1,33 @@
 /* Curriculum Audit Analyser: extra styles layered on top of ../styles.css */
 
-#back-link { margin-left: auto; text-decoration: none; }
+#back-link {
+  margin-left: auto;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 999px;
+  padding: 0.65rem 1.35rem;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+}
+#back-link:hover { background: var(--surface-2); transform: translateY(-2px); }
 #lock-btn { margin-left: 0.6rem; }
+
+.meta-row input[type="text"] {
+  padding: 0.55rem 0.75rem;
+  border: 2px solid var(--baseline);
+  border-radius: 12px;
+  background-color: var(--page);
+  color: var(--text-primary);
+  font-size: 0.93rem;
+  font-family: inherit;
+  font-weight: 600;
+  transition: border-color 0.15s;
+}
+.meta-row input[type="text"]:hover, .meta-row input[type="text"]:focus { border-color: var(--accent-deep); outline: none; }
 
 .dim-card { margin-top: 1.4rem; }
 .dim-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }

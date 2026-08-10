@@ -58,8 +58,11 @@ function buildPrompt(dim: Dimension): string {
     `with visible outcomes.\n\nScored items:\n${itemsText}\n\n` +
     `Write exactly ${dim.maxHighlight} highlight lines (strengths and/or gaps) that the Centre Director ` +
     `should be aware of, prioritising the lowest-scoring items as gaps and the highest-scoring as strengths. ` +
-    `Each line must be a single concrete, specific sentence (like an auditor's note, not generic advice), ` +
-    `starting with "Strength - " or "Gap - ". Respond as JSON array of strings.`
+    `Each line must be 2-4 sentences, like an auditor's note (specific, evidence-based, never generic): ` +
+    `name the exact item(s) and criteria that justify the rating, explain why it matters for children's ` +
+    `learning outcomes, then end with 1-2 concrete, actionable suggestions — for a Gap, how the centre can ` +
+    `close it; for a Strength, how to sustain or extend it further. Start each line with "Strength - " or ` +
+    `"Gap - ". Respond as JSON array of strings.`
   );
 }
 
