@@ -2,7 +2,7 @@
 // Same provider-pool pattern as supabase/functions/class-analyser: walks
 // gemini-2.5-flash -> gemini-2.5-flash-lite -> mistral-small until one succeeds.
 
-const APP_PASSWORD = Deno.env.get("CURRICULUM_AUDIT_PASSWORD") || "";
+const MASTER_PASSWORD = Deno.env.get("MASTER_PASSWORD") || "";
 const GEMINI_KEYS = [
   ...(Deno.env.get("CLASS_ANALYSER_GEMINI_KEYS") || "").split(",").map((k) => k.trim()).filter(Boolean),
   Deno.env.get("GEMINI_API_KEY") || "",
@@ -160,13 +160,13 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  if (!APP_PASSWORD || body.password !== APP_PASSWORD) {
+  if (!MASTER_PASSWORD || body.password !== MASTER_PASSWORD) {
     return json({ error: "Incorrect password" }, 401);
   }
 
   const dim = body.dimension;
   if (!dim || !Array.isArray(dim.items) || dim.items.length === 0) {
-    return json({ error: "No dimension items provided" }, 400);
+    return json({ error: "No dimension items provided", scope: "all" }, 400);
   }
   if (typeof dim.label !== "string" || dim.label.length > 200) {
     return json({ error: "Malformed dimension label" }, 400);
@@ -203,14 +203,14 @@ Deno.serve(async (req) => {
     for (const attempt of pool) {
       const result = await attempt.run(controller.signal);
       if ("lines" in result) {
-        return json({ lines: result.lines.slice(0, maxHighlight), model: attempt.label, fallbacksUsed: failures });
+        return json({ lines: result.lines.slice(0, maxHighlight), model: attempt.label, fallbacksUsed: failures, scope: "all" });
       }
       failures.push(`${attempt.label}: ${result.error}`);
       if (!result.quota) {
         await new Promise((r) => setTimeout(r, 1500));
         const retry = await attempt.run(controller.signal);
         if ("lines" in retry) {
-          return json({ lines: retry.lines.slice(0, maxHighlight), model: attempt.label, fallbacksUsed: failures });
+          return json({ lines: retry.lines.slice(0, maxHighlight), model: attempt.label, fallbacksUsed: failures, scope: "all" });
         }
         failures.push(`${attempt.label} (retry): ${retry.error}`);
       }

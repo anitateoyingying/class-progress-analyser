@@ -25,8 +25,18 @@ async function verifyPassword(pw) {
     body: JSON.stringify({ password: pw, request: null }),
   });
   if (res.status === 401) return false;
+  const data = await res.json().catch(() => ({}));
+  sessionStorage.setItem("portal_scope", data.scope === "all" ? "all" : "single");
+  applyNavScope();
   return true;
 }
+
+// The master password unlocks all 3 portals; the scoped password only unlocks this one.
+function applyNavScope() {
+  const isAll = sessionStorage.getItem("portal_scope") === "all";
+  document.querySelectorAll('[data-portal="restricted"]').forEach((el) => el.classList.toggle("hidden", !isAll));
+}
+applyNavScope();
 
 function showGate(msg) {
   sessionStorage.removeItem("lesson_plans_password");

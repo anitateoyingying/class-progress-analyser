@@ -40,8 +40,18 @@ async function verifyPassword(pw) {
     body: JSON.stringify({ password: pw, objectives: [] }),
   });
   if (res.status === 401) return false;
+  const data = await res.json().catch(() => ({}));
+  sessionStorage.setItem("portal_scope", data.scope === "all" ? "all" : "single");
+  applyNavScope();
   return true; // 400 "No objectives provided" means the password was accepted
 }
+
+// The master password unlocks all 3 portals; the scoped password only unlocks this one.
+function applyNavScope() {
+  const isAll = sessionStorage.getItem("portal_scope") === "all";
+  document.querySelectorAll('[data-portal="restricted"]').forEach((el) => el.classList.toggle("hidden", !isAll));
+}
+applyNavScope();
 
 function showGate(msg) {
   sessionStorage.removeItem("cpa_password");

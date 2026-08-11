@@ -4,7 +4,7 @@
 
 import { LEARNING_OUTCOMES, type LearningOutcome } from "./learning-outcomes.ts";
 
-const APP_PASSWORD = Deno.env.get("LESSON_PLANS_PASSWORD") || "";
+const MASTER_PASSWORD = Deno.env.get("MASTER_PASSWORD") || "";
 const GEMINI_KEYS = [
   ...(Deno.env.get("CLASS_ANALYSER_GEMINI_KEYS") || "").split(",").map((k) => k.trim()).filter(Boolean),
   Deno.env.get("GEMINI_API_KEY") || "",
@@ -289,13 +289,13 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  if (!APP_PASSWORD || body.password !== APP_PASSWORD) {
+  if (!MASTER_PASSWORD || body.password !== MASTER_PASSWORD) {
     return json({ error: "Incorrect password" }, 401);
   }
 
   const r = body.request;
   if (!r || typeof r.topic !== "string" || r.topic.trim().length === 0) {
-    return json({ error: "No lesson request provided" }, 400);
+    return json({ error: "No lesson request provided", scope: "all" }, 400);
   }
   if (typeof r.levelLabel !== "string" || r.levelLabel.length > 100) {
     return json({ error: "Malformed level label" }, 400);
@@ -346,14 +346,14 @@ Deno.serve(async (req) => {
     for (const attempt of pool) {
       const result = await attempt.run(controller.signal);
       if ("lessons" in result) {
-        return json({ lessons: finalize(result.lessons), model: attempt.label, fallbacksUsed: failures });
+        return json({ lessons: finalize(result.lessons), model: attempt.label, fallbacksUsed: failures, scope: "all" });
       }
       failures.push(`${attempt.label}: ${result.error}`);
       if (!result.quota) {
         await new Promise((r) => setTimeout(r, 1500));
         const retry = await attempt.run(controller.signal);
         if ("lessons" in retry) {
-          return json({ lessons: finalize(retry.lessons), model: attempt.label, fallbacksUsed: failures });
+          return json({ lessons: finalize(retry.lessons), model: attempt.label, fallbacksUsed: failures, scope: "all" });
         }
         failures.push(`${attempt.label} (retry): ${retry.error}`);
       }

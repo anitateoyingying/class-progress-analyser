@@ -9,6 +9,7 @@
 //   npx supabase secrets set CLASS_ANALYSER_GEMINI_KEYS=key1,key2 --project-ref <ref>
 
 const APP_PASSWORD = Deno.env.get("CLASS_ANALYSER_PASSWORD") || "";
+const MASTER_PASSWORD = Deno.env.get("MASTER_PASSWORD") || "";
 const GEMINI_KEYS = [
   ...(Deno.env.get("CLASS_ANALYSER_GEMINI_KEYS") || "").split(",").map((k) => k.trim()).filter(Boolean),
   Deno.env.get("GEMINI_API_KEY") || "",
@@ -174,13 +175,16 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  if (!APP_PASSWORD || body.password !== APP_PASSWORD) {
+  const isMaster = !!MASTER_PASSWORD && body.password === MASTER_PASSWORD;
+  const isScoped = !!APP_PASSWORD && body.password === APP_PASSWORD;
+  if (!isMaster && !isScoped) {
     return json({ error: "Incorrect password" }, 401);
   }
+  const scope = isMaster ? "all" : "single";
 
   const objectives = (body.objectives || []).slice(0, 15);
   if (objectives.length === 0) {
-    return json({ error: "No objectives provided" }, 400);
+    return json({ error: "No objectives provided", scope }, 400);
   }
   for (const o of objectives) {
     if (typeof o.objective !== "string" || o.objective.length > 500) {
@@ -234,7 +238,7 @@ Deno.serve(async (req) => {
           const hit = result.rows.find((p) => p.index === i + 1);
           return (hit?.strategies || []).slice(0, 3);
         });
-        return json({ strategies, model: attempt.label, fallbacksUsed: failures });
+        return json({ strategies, model: attempt.label, fallbacksUsed: failures, scope });
       }
       failures.push(`${attempt.label}: ${result.error}`);
       // Non-quota transient failure: one quick retry of the same provider.
@@ -246,7 +250,7 @@ Deno.serve(async (req) => {
             const hit = retry.rows.find((p) => p.index === i + 1);
             return (hit?.strategies || []).slice(0, 3);
           });
-          return json({ strategies, model: attempt.label, fallbacksUsed: failures });
+          return json({ strategies, model: attempt.label, fallbacksUsed: failures, scope });
         }
         failures.push(`${attempt.label} (retry): ${retry.error}`);
       }
