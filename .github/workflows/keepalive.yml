@@ -1,0 +1,16 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # daily 01:00 UTC (09:00 SGT)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      # Any invocation counts as activity; a 401 (no password) is expected and fine.
+      - run: |
+          curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 30 \
+            -X POST https://hrbhwnscjeokaovoivmn.supabase.co/functions/v1/class-analyser \
+            -H "Content-Type: application/json" -d '{}'
