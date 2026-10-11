@@ -3,6 +3,11 @@
 // curriculum-audit: walks gemini-2.5-flash -> gemini-2.5-flash-lite -> mistral-small.
 
 import { LEARNING_OUTCOMES, type LearningOutcome } from "./learning-outcomes.ts";
+import { IBRAIN_TERM1 } from "./ibrain-term1.ts";
+import {
+  buildIbrainPrompt, finalizeIbrainLesson, IBRAIN_MISTRAL_SHAPE, ibrainSchema, isRawIbrainLesson,
+  type IbrainRequest, type RawIbrainLesson,
+} from "./ibrain.ts";
 
 const MASTER_PASSWORD = Deno.env.get("MASTER_PASSWORD") || "";
 const GEMINI_KEYS = [
@@ -58,7 +63,8 @@ interface Lesson {
 
 type RawLesson = Omit<Lesson, "objectives">;
 
-type ProviderResult = { lessons: RawLesson[] } | { error: string; quota?: boolean };
+type ProviderResult<T> = { value: T } | { error: string; quota?: boolean };
+type Attempt<T> = { label: string; run: (signal: AbortSignal) => Promise<ProviderResult<T>> };
 
 function buildLessonSchema(validCodes: string[]) {
   return {
@@ -199,20 +205,27 @@ function buildPrompt(req: LessonRequest, catalogue: LearningOutcome[]): string {
   );
 }
 
-async function callGemini(key: string, model: string, prompt: string, validCodes: string[], count: number, signal: AbortSignal): Promise<ProviderResult> {
-  const body = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: 8192,
-      responseMimeType: "application/json",
-      responseSchema: { type: "ARRAY", items: buildLessonSchema(validCodes) },
-    },
+interface GeminiOpts { schema: unknown; maxTokens: number; thinkingBudget?: number }
+
+async function callGemini<T>(
+  key: string, model: string, prompt: string, opts: GeminiOpts, parse: (v: unknown) => T | null, signal: AbortSignal,
+): Promise<ProviderResult<T>> {
+  const generationConfig: Record<string, unknown> = {
+    temperature: 0.6,
+    maxOutputTokens: opts.maxTokens,
+    responseMimeType: "application/json",
+    responseSchema: opts.schema,
   };
+  if (opts.thinkingBudget != null) generationConfig.thinkingConfig = { thinkingBudget: opts.thinkingBudget };
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal },
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig }),
+        signal,
+      },
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -226,31 +239,23 @@ async function callGemini(key: string, model: string, prompt: string, validCodes
     } catch {
       return { error: `Gemini ${model}: unparseable output` };
     }
-    const lessons = extractLessons(parsed);
-    if (!lessons) return { error: `Gemini ${model}: malformed output` };
-    return { lessons: lessons.slice(0, count) };
+    const value = parse(parsed);
+    return value ? { value } : { error: `Gemini ${model}: malformed output` };
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
     return { error: `Gemini ${model}: ${e instanceof Error ? e.message : e}` };
   }
 }
 
-async function callMistral(prompt: string, count: number, signal: AbortSignal): Promise<ProviderResult> {
-  prompt += `\n\nRespond ONLY with JSON of the form {"lessons":[{...lesson object with an "objectiveCodes" array of exactly 2 codes copied verbatim from the list above, and an "objectiveApplications" array of exactly 2 tailored sentences (not copied from the official wording) in the same order...}, ...]}.`;
+async function callMistral<T>(
+  prompt: string, system: string, maxTokens: number, parse: (v: unknown) => T | null, signal: AbortSignal,
+): Promise<ProviderResult<T>> {
   const body = {
     model: "mistral-small-latest",
     temperature: 0.6,
-    max_tokens: 8192,
+    max_tokens: maxTokens,
     response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an expert early-childhood curriculum writer. Reply ONLY with JSON of the form " +
-          '{"lessons":[{...lesson object...}, ...]}.',
-      },
-      { role: "user", content: prompt },
-    ],
+    messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
   };
   try {
     const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
@@ -269,20 +274,99 @@ async function callMistral(prompt: string, count: number, signal: AbortSignal): 
     } catch {
       return { error: "Mistral: unparseable output" };
     }
-    const lessons = extractLessons(parsed);
-    if (!lessons) return { error: "Mistral: malformed output" };
-    return { lessons: lessons.slice(0, count) };
+    const value = parse(parsed);
+    return value ? { value } : { error: "Mistral: malformed output" };
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
     return { error: `Mistral: ${e instanceof Error ? e.message : e}` };
   }
 }
 
+function buildAttempts<T>(
+  prompt: string, gemini: GeminiOpts, mistral: { prompt: string; system: string }, parse: (v: unknown) => T | null,
+): Attempt<T>[] {
+  const attempts: Attempt<T>[] = [];
+  for (const model of GEMINI_MODELS) {
+    GEMINI_KEYS.forEach((key, k) => {
+      attempts.push({
+        label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
+        run: (signal) => callGemini(key, model, prompt, gemini, parse, signal),
+      });
+    });
+  }
+  if (MISTRAL_API_KEY) {
+    attempts.push({ label: "mistral-small", run: (signal) => callMistral(mistral.prompt, mistral.system, gemini.maxTokens, parse, signal) });
+  }
+  return attempts;
+}
+
+// Walks the provider pool (retrying non-quota failures once) and maps the first success to a response.
+async function runPool<T>(attempts: Attempt<T>[], skip: number, timeoutMs: number, respond: (v: T, label: string, failures: string[]) => Response): Promise<Response> {
+  const pool = attempts.slice(Math.min(skip, attempts.length - 1));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const failures: string[] = [];
+  try {
+    for (const attempt of pool) {
+      const result = await attempt.run(controller.signal);
+      if ("value" in result) return respond(result.value, attempt.label, failures);
+      failures.push(`${attempt.label}: ${result.error}`);
+      if (!result.quota) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const retry = await attempt.run(controller.signal);
+        if ("value" in retry) return respond(retry.value, attempt.label, failures);
+        failures.push(`${attempt.label} (retry): ${retry.error}`);
+      }
+    }
+    return json({ error: `All AI providers are busy right now. Please try again in a minute. (${failures.join(" | ")})` }, 502);
+  } catch (e) {
+    const aborted = e instanceof DOMException && e.name === "AbortError";
+    return json({ error: aborted ? "Request timed out" : `Upstream error: ${e}` }, 504);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function handleIbrain(r: Record<string, unknown>, skip: number): Promise<Response> | Response {
+  const levelKey = r.levelKey;
+  if (levelKey !== "pg" && levelKey !== "pn") return json({ error: "Malformed level key" }, 400);
+  const plan = IBRAIN_TERM1[levelKey];
+  if (r.action === "term") return json({ term: plan, scope: "all" });
+
+  const week = Number(r.week), session = Number(r.session);
+  if (!Number.isInteger(week) || week < 1 || week > plan.weeks.length) return json({ error: "Malformed week" }, 400);
+  if (!Number.isInteger(session) || session < 1 || session > 3) return json({ error: "Malformed session" }, 400);
+  const request: IbrainRequest = { levelKey, week, session };
+
+  const catalogue = LEARNING_OUTCOMES[levelKey];
+  const prompt = buildIbrainPrompt(plan, request, catalogue);
+  // Finalize inside parse so a structurally broken lesson counts as a provider failure and gets retried.
+  const parse = (v: unknown) => {
+    const raw = v && typeof v === "object" && !Array.isArray(v) && !isRawIbrainLesson(v)
+      ? Object.values(v as Record<string, unknown>).find(isRawIbrainLesson)
+      : Array.isArray(v) ? v.find(isRawIbrainLesson) : v;
+    if (!isRawIbrainLesson(raw)) return null;
+    try {
+      return finalizeIbrainLesson(raw as RawIbrainLesson, plan, request, catalogue);
+    } catch {
+      return null;
+    }
+  };
+  const attempts = buildAttempts(
+    prompt,
+    { schema: ibrainSchema(catalogue.map((o) => o.code), session), maxTokens: 16384, thinkingBudget: 1024 },
+    { prompt: `${prompt}\n\n${IBRAIN_MISTRAL_SHAPE}`, system: "You are an expert early-childhood curriculum writer. Reply ONLY with JSON." },
+    parse,
+  );
+  return runPool(attempts, skip, 135_000, (lesson, label, failures) =>
+    json({ lesson, model: label, fallbacksUsed: failures, scope: "all" }));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  let body: { password?: string; request?: LessonRequest; skipProviders?: number };
+  let body: { password?: string; request?: LessonRequest & { mode?: string }; skipProviders?: number };
   try {
     body = await req.json();
   } catch {
@@ -293,7 +377,11 @@ Deno.serve(async (req) => {
     return json({ error: "Incorrect password" }, 401);
   }
 
+  const skip = Number(body.skipProviders) || 0;
   const r = body.request;
+  if (r && typeof r === "object" && r.mode === "ibrain") {
+    return handleIbrain(r as unknown as Record<string, unknown>, skip);
+  }
   if (!r || typeof r.topic !== "string" || r.topic.trim().length === 0) {
     return json({ error: "No lesson request provided", scope: "all" }, 400);
   }
@@ -321,48 +409,26 @@ Deno.serve(async (req) => {
   const catalogue = LEARNING_OUTCOMES[request.levelKey];
   const validCodes = catalogue.map((o) => o.code);
   const prompt = buildPrompt(request, catalogue);
-  const finalize = (lessons: RawLesson[]): Lesson[] =>
-    lessons.map((l) => resolveObjectives(l, catalogue, request.language));
-
-  const attempts: Array<{ label: string; run: (signal: AbortSignal) => Promise<ProviderResult> }> = [];
-  for (const model of GEMINI_MODELS) {
-    GEMINI_KEYS.forEach((key, k) => {
-      attempts.push({
-        label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
-        run: (signal) => callGemini(key, model, prompt, validCodes, count, signal),
-      });
-    });
-  }
-  if (MISTRAL_API_KEY) {
-    attempts.push({ label: "mistral-small", run: (signal) => callMistral(prompt, count, signal) });
-  }
-  const skip = Number(body.skipProviders) || 0;
-  const pool = attempts.slice(Math.min(skip, attempts.length - 1));
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90_000);
-  const failures: string[] = [];
-  try {
-    for (const attempt of pool) {
-      const result = await attempt.run(controller.signal);
-      if ("lessons" in result) {
-        return json({ lessons: finalize(result.lessons), model: attempt.label, fallbacksUsed: failures, scope: "all" });
-      }
-      failures.push(`${attempt.label}: ${result.error}`);
-      if (!result.quota) {
-        await new Promise((r) => setTimeout(r, 1500));
-        const retry = await attempt.run(controller.signal);
-        if ("lessons" in retry) {
-          return json({ lessons: finalize(retry.lessons), model: attempt.label, fallbacksUsed: failures, scope: "all" });
-        }
-        failures.push(`${attempt.label} (retry): ${retry.error}`);
-      }
-    }
-    return json({ error: `All AI providers are busy right now. Please try again in a minute. (${failures.join(" | ")})` }, 502);
-  } catch (e) {
-    const aborted = e instanceof DOMException && e.name === "AbortError";
-    return json({ error: aborted ? "Request timed out" : `Upstream error: ${e}` }, 504);
-  } finally {
-    clearTimeout(timer);
-  }
+  const parse = (v: unknown) => {
+    const lessons = extractLessons(v);
+    return lessons ? lessons.slice(0, count) : null;
+  };
+  const mistralPrompt = prompt +
+    `\n\nRespond ONLY with JSON of the form {"lessons":[{...lesson object with an "objectiveCodes" array of exactly 2 codes copied verbatim from the list above, and an "objectiveApplications" array of exactly 2 tailored sentences (not copied from the official wording) in the same order...}, ...]}.`;
+  const attempts = buildAttempts(
+    prompt,
+    { schema: { type: "ARRAY", items: buildLessonSchema(validCodes) }, maxTokens: 8192 },
+    {
+      prompt: mistralPrompt,
+      system: 'You are an expert early-childhood curriculum writer. Reply ONLY with JSON of the form {"lessons":[{...lesson object...}, ...]}.',
+    },
+    parse,
+  );
+  return runPool(attempts, skip, 90_000, (lessons, label, failures) =>
+    json({
+      lessons: lessons.map((l) => resolveObjectives(l, catalogue, request.language)),
+      model: label,
+      fallbacksUsed: failures,
+      scope: "all",
+    }));
 });

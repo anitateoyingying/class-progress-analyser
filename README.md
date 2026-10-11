@@ -9,9 +9,15 @@ that need the most attention and get AI-generated teaching strategies.
 - [Curriculum Audit Analyser](./audit/) — upload a completed CA Tool workbook to
   auto-score it against the audit rubric and generate a Curriculum Audit Report
   (with AI-drafted strength/gap commentary) as a downloadable Word document.
-- [Lesson Plan Generator](./lesson-plans/) — choose a level, language and topic
-  to AI-generate ready-to-teach lesson plans, exported as individual Word
-  documents per level + language.
+- [Lesson Plan Generator](./lesson-plans/) — two generators in one page:
+  - **Character Development Lesson Plans** — choose a level, language and topic
+    to AI-generate ready-to-teach lesson plans, exported as Word documents.
+  - **iBrain Lesson Plans** — story-driven Tuff Tray curriculum for Playgroup
+    (2 YO, *We're Going on a Bear Hunt*) and Pre-Nursery (3 YO, *The Rainbow
+    Fish*): 8 weeks x 3 lessons (IB01/IB02/IB03, 30 mins) on the AGAPE iBrain
+    template, with SMART coded objectives, vector scene cards, tuff tray set-up
+    visions and word cards, exported as PowerPoint. The Term 1 design scaffold
+    lives in `supabase/functions/lesson-plans/ibrain-term1.ts`.
 
 ## How it works
 
@@ -47,9 +53,12 @@ npx supabase secrets set CLASS_ANALYSER_PASSWORD=<password> --project-ref <ref>
 npx supabase functions deploy curriculum-audit --project-ref <ref> --no-verify-jwt
 npx supabase secrets set CURRICULUM_AUDIT_PASSWORD=<password> --project-ref <ref>
 
-# Lesson Plan Generator (lesson-plans/) uses its own function + password:
+# Lesson Plan Generator (lesson-plans/, both generators) accepts the master password:
 npx supabase functions deploy lesson-plans --project-ref <ref> --no-verify-jwt
-npx supabase secrets set LESSON_PLANS_PASSWORD=<password> --project-ref <ref>
+npx supabase secrets set MASTER_PASSWORD=<password> --project-ref <ref>
+
+# iBrain scaffold + normalisation checks:
+npx -y deno@2 test --allow-import supabase/functions/lesson-plans/ibrain_test.ts
 ```
 
 ## Local development

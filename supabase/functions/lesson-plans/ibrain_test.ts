@@ -1,0 +1,74 @@
+// Run: npx -y deno@2 test supabase/functions/lesson-plans/ibrain_test.ts
+import { assert, assertEquals } from "jsr:@std/assert@1";
+import { LEARNING_OUTCOMES } from "./learning-outcomes.ts";
+import { IBRAIN_TERM1, blockForWeek } from "./ibrain-term1.ts";
+import { buildIbrainPrompt, finalizeIbrainLesson, type RawIbrainLesson } from "./ibrain.ts";
+
+Deno.test("scaffold: every code is official, every week has a tray block", () => {
+  for (const level of ["pg", "pn"] as const) {
+    const plan = IBRAIN_TERM1[level];
+    const codes = new Set(LEARNING_OUTCOMES[level].map((o) => o.code));
+    assertEquals(plan.weeks.length, 8);
+    for (const w of plan.weeks) {
+      assert(codes.has(w.secCode) && w.secCode.includes(".SED."), `${level} wk${w.week} sec ${w.secCode}`);
+      assert(codes.has(w.llCode) && w.llCode.includes(".LL."), `${level} wk${w.week} ll ${w.llCode}`);
+      assert(blockForWeek(plan, w.week), `${level} wk${w.week} block`);
+    }
+    for (const b of plan.blocks) {
+      for (const c of [...b.outcomes, b.domainCode]) assert(codes.has(c), `${level} ${b.id} ${c}`);
+    }
+  }
+});
+
+Deno.test("finalize: enforces template steps, classifies objectives, falls back on bad codes", () => {
+  const plan = IBRAIN_TERM1.pn;
+  const raw: RawIbrainLesson = {
+    lessonTitle: "Shiny Ocean",
+    disposition: { name: "Not a disposition", description: "x" },
+    efSkills: [{ skill: "Working Memory", how: "recall" }, { skill: "Working Memory", how: "dup" }],
+    objectives: [
+      { code: "EY.PN.SED.6.1", text: "children will be able to ask 1 question (EY.PN.SED.6.1)" },
+      { code: "EY.FAKE.1", text: "invented" },
+      { code: "EY.PN.NE.2.1", text: "sort 3 shells by size" },
+    ],
+    steps: ["Tuning In", "Storytelling", "Role Play", "Cleaning Up", "Cooling Down", "Wrap Up"].map((name) => ({
+      name, materials: ["m"], process: ["p"], intentional: [{ link: "Disposition", how: "h" }, { link: "bogus", how: "h" }],
+    })).reverse(),
+    differentiation: { support: "s", stretch: "t" },
+    lookFors: ["a", "b", "c", "d"],
+    rehearseRetrieve: { teacherPrompt: "tp", extension: "ex" },
+  };
+  const l = finalizeIbrainLesson(raw, plan, { levelKey: "pn", week: 2, session: 1 }, LEARNING_OUTCOMES.pn);
+  assertEquals(l.title, "Pre-Nursery Term 1 iBrain Lesson 2 - IB01");
+  assertEquals(l.steps.map((s) => s.minutes).reduce((a, b) => a + b, 0), 30);
+  assertEquals(l.steps[0].name, "Tuning In");
+  assertEquals(l.steps[0].intentional.length, 1);
+  assertEquals(l.objectives.map((o) => o.code), [plan.weeks[1].llCode, "EY.PN.SED.6.1", "EY.PN.NE.2.1"]);
+  assertEquals(l.objectives[1].text, "Ask 1 question");
+  assertEquals(l.disposition.name, "Engagement");
+  assertEquals(l.efSkills.length, 1);
+  assertEquals(l.lookFors.length, 3);
+  assertEquals(l.groupRotation, null);
+});
+
+Deno.test("finalize: rejects AI objectives without a measurable criterion", () => {
+  const plan = IBRAIN_TERM1.pg;
+  const steps = ["Tuning In", "Storytelling", "Role Play", "Cleaning Up", "Cooling Down", "Wrap Up"].map((name) => ({ name, materials: [], process: ["p"], intentional: [] }));
+  const raw = {
+    lessonTitle: "t", disposition: { name: "Engagement", description: "d" }, efSkills: [],
+    objectives: [{ code: "EY.PG.LL.1.1", text: "Respond to 2 words" }, { code: "EY.PG.SED.2.2", text: "Seek comfort from the teacher" }, { code: "EY.PG.NE.2.1", text: "Touch 3 textures" }],
+    steps, differentiation: { support: "", stretch: "" }, lookFors: [], rehearseRetrieve: { teacherPrompt: "", extension: "" },
+  } as RawIbrainLesson;
+  let threw = false;
+  try { finalizeIbrainLesson(raw, plan, { levelKey: "pg", week: 1, session: 1 }, LEARNING_OUTCOMES.pg); } catch { threw = true; }
+  assert(threw);
+});
+
+Deno.test("prompt: IB02/IB03 concurrency + add-on week wording", () => {
+  const plan = IBRAIN_TERM1.pg;
+  const p2 = buildIbrainPrompt(plan, { levelKey: "pg", week: 2, session: 3 }, LEARNING_OUTCOMES.pg);
+  assert(p2.includes("SWAPPED from IB02"));
+  assert(p2.includes("THIS IS WEEK 2 OF THE BLOCK"));
+  assert(p2.includes("EY.PG.LL"));
+  assert(!p2.includes("EY.PN."));
+});

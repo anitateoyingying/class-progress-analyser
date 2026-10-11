@@ -50,6 +50,7 @@ function showGate(msg) {
 function showApp() {
   gate.classList.add("hidden");
   app.classList.remove("hidden");
+  document.dispatchEvent(new Event("app:unlocked"));
 }
 
 $("#gate-form").addEventListener("submit", async (e) => {
@@ -275,6 +276,8 @@ async function downloadDocx(batch) {
   URL.revokeObjectURL(a.href);
 }
 
-// ===== boot =====
-if (getPassword()) showApp();
-else showGate();
+// ===== boot (deferred so later scripts can listen for app:unlocked) =====
+window.addEventListener("DOMContentLoaded", () => {
+  if (getPassword()) showApp();
+  else showGate();
+});

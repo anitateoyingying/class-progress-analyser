@@ -80,3 +80,101 @@
 @media (max-width: 560px) {
   .app-header { flex-wrap: wrap; }
 }
+
+/* ===== mode tabs ===== */
+.mode-tabs { display: flex; gap: 0.5rem; margin: 0 0 1rem; flex-wrap: wrap; }
+.mode-tab {
+  background: var(--surface-1); color: var(--text-secondary);
+  border: 2px solid var(--baseline); border-radius: 999px;
+  padding: 0.5rem 1.1rem; font: inherit; font-weight: 700; font-size: 0.92rem; cursor: pointer;
+}
+.mode-tab:hover { border-color: var(--accent-deep); color: var(--text-primary); }
+.mode-tab.active { background: var(--accent); border-color: var(--accent-deep); color: #3d2410; }
+.mode-tab:focus-visible { outline: 3px solid var(--blue-ink); outline-offset: 2px; }
+
+/* ===== iBrain ===== */
+.ib-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.ib-overview, .ib-week {
+  background: var(--surface-1); border: 2px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 1.3rem; margin-top: 1.4rem;
+}
+.ib-overview h2, .ib-week h2 { font-size: 1.2rem; margin: 0; font-weight: 600; }
+.ib-overview-head .muted, .ib-week-head .muted { margin: 0.15rem 0 0.8rem; }
+.ib-facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0; font-size: 0.9rem; }
+.ib-facts dt { font-weight: 800; color: var(--accent-ink); }
+.ib-facts dd { margin: 0; }
+.ib-details { margin-top: 1rem; border-top: 2px dashed var(--grid); padding-top: 0.8rem; }
+.ib-details > summary { cursor: pointer; font-weight: 800; color: var(--text-primary); font-size: 0.98rem; }
+.ib-details > summary:focus-visible { outline: 3px solid var(--blue-ink); outline-offset: 2px; }
+.ib-structure { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin: 0.8rem 0; }
+.ib-structure-col { background: var(--surface-2); border-radius: 12px; padding: 0.8rem 0.9rem; }
+.ib-structure-col h4 { margin: 0; font-size: 1rem; color: var(--accent-ink); }
+.ib-structure-col p { margin: 0.1rem 0 0.4rem; font-size: 0.8rem; }
+.ib-structure-col ol { margin: 0; padding-left: 1.2rem; font-size: 0.86rem; }
+.ib-grid { width: 100%; border-collapse: collapse; margin-top: 0.8rem; font-size: 0.84rem; }
+.ib-grid th, .ib-grid td { border: 1px solid var(--baseline); padding: 0.5rem 0.6rem; vertical-align: top; text-align: left; white-space: pre-line; }
+.ib-grid th { background: var(--surface-2); font-weight: 800; }
+.ib-grid p { margin: 0 0 0.4rem; }
+.ib-thumb { width: 200px; }
+.ib-thumb svg, .ib-art svg, .ib-word svg { display: block; width: 100%; height: auto; }
+.ib-wonder { color: var(--blue-ink); font-weight: 700; }
+.ib-addon { color: #b3125f; font-weight: 600; }
+
+.ib-resources { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1rem; align-items: start; }
+.ib-figure { margin: 0; background: var(--surface-2); border-radius: 14px; padding: 0.6rem; }
+.ib-figure figcaption { font-size: 0.85rem; padding: 0.5rem 0.2rem 0; }
+.ib-figure figcaption ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+.ib-figure figcaption p { margin: 0.2rem 0 0; }
+.ib-words-label { font-size: 0.85rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+.ib-words { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem; }
+
+.ib-lesson { margin-top: 1.4rem; }
+.ib-lesson-pending { display: flex; align-items: center; gap: 0.5rem; padding: 0.9rem; border: 2px dashed var(--baseline); border-radius: 12px; color: var(--text-secondary); }
+.ib-lesson-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.5rem; }
+.ib-lesson-head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.ib-lesson-sub { margin: 0.1rem 0 0; font-size: 0.85rem; color: var(--text-secondary); }
+.ib-table-wrap { overflow-x: auto; }
+.ib-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--page); }
+.ib-table th, .ib-table td { border: 1.5px solid var(--text-secondary); padding: 0.55rem 0.65rem; vertical-align: top; text-align: left; }
+.ib-table th { width: 9.5rem; background: var(--surface-2); font-weight: 800; }
+.ib-table p { margin: 0 0 0.3rem; }
+.ib-cwbat { font-weight: 700; }
+.ib-objectives { margin: 0; padding-left: 1.3rem; }
+.ib-objectives li { margin-bottom: 0.4rem; }
+.ib-code { font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
+.ib-ef, .ib-proc, .ib-intent, .ib-check { margin: 0.2rem 0 0; padding-left: 1.2rem; }
+.ib-proc li, .ib-intent li { margin-bottom: 0.25rem; }
+.ib-mat { font-size: 0.85rem; }
+.ib-intent { list-style: none; padding-left: 0; margin-top: 0.5rem; border-top: 1px dashed var(--baseline); padding-top: 0.45rem; font-size: 0.84rem; }
+.ib-check { list-style: none; padding-left: 0; }
+.ib-check li::before { content: "☐ "; font-weight: 700; }
+.ib-chip {
+  display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
+  background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--baseline); vertical-align: 1px;
+}
+.chip-ll { background: #dbeafe; color: #123f7a; border-color: #9fc3f2; }
+.chip-sec { background: #fde2ee; color: #8a1048; border-color: #f2a7c8; }
+.chip-dom { background: #ddf3e1; color: #1f5f2c; border-color: #9fd6aa; }
+.chip-disp { background: #fff0d6; color: #7a4a09; border-color: #f2c98a; }
+.chip-ef { background: #efe3fb; color: #55207f; border-color: #cba6ee; }
+.chip-tray { background: #d9f1f6; color: #0d5463; border-color: #9fd6e2; }
+.chip-art { background: #fde9d9; color: #7a3a0d; border-color: #f4bf95; }
+
+@media (prefers-color-scheme: dark) {
+  .chip-ll, .chip-sec, .chip-dom, .chip-disp, .chip-ef, .chip-tray, .chip-art { filter: brightness(0.9); }
+  .ib-addon { color: #f39ac2; }
+}
+@media (max-width: 760px) {
+  .ib-structure, .ib-resources { grid-template-columns: 1fr; }
+  .ib-facts { grid-template-columns: 1fr; }
+  .ib-table, .ib-table tbody, .ib-table tr, .ib-table th, .ib-table td { display: block; width: auto; }
+  .ib-table tr { border-bottom: 1.5px solid var(--text-secondary); }
+  .ib-table th, .ib-table td { border: 0; border-left: 1.5px solid var(--text-secondary); border-right: 1.5px solid var(--text-secondary); }
+  .ib-table tr:first-child { border-top: 1.5px solid var(--text-secondary); }
+  .ib-thumb { width: 140px; }
+}
+@media print {
+  .rainbow-strip, .topbar, .mode-tabs, .lp-form, .ib-lesson-head button, #lock-btn, .app-footer { display: none !important; }
+  .ib-week { break-before: page; box-shadow: none; }
+  .ib-lesson { break-before: page; }
+}
