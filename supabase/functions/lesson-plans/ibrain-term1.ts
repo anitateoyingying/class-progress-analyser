@@ -40,6 +40,7 @@ export interface WeekPlan {
 }
 export interface TermPlan {
   level: "pg" | "pn";
+  term: number;
   levelLabel: string;
   shortLabel: string;
   story: string;
@@ -61,6 +62,7 @@ const WM = "Working Memory", IC = "Inhibitory Control", CF = "Cognitive Flexibil
 // ---------------------------------------------------------------------------
 const PN: TermPlan = {
   level: "pn",
+  term: 1,
   levelLabel: "Pre-Nursery (3 Year Olds)",
   shortLabel: "Pre-Nursery",
   story: "The Rainbow Fish",
@@ -345,6 +347,7 @@ const PN: TermPlan = {
 // ---------------------------------------------------------------------------
 const PG: TermPlan = {
   level: "pg",
+  term: 1,
   levelLabel: "Playgroup (2 Year Olds)",
   shortLabel: "Playgroup",
   story: "We're Going on a Bear Hunt",

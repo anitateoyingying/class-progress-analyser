@@ -5,7 +5,7 @@
 import { LEARNING_OUTCOMES, type LearningOutcome } from "./learning-outcomes.ts";
 import { IBRAIN_TERM1 } from "./ibrain-term1.ts";
 import {
-  buildIbrainPrompt, finalizeIbrainLesson, IBRAIN_MISTRAL_SHAPE, ibrainSchema, isRawIbrainLesson,
+  buildIbrainPrompt, finalizeIbrainLesson, IBRAIN_MISTRAL_SHAPE, ibrainSchema, isRawIbrainLesson, mergeEditedPlan,
   type IbrainRequest, type RawIbrainLesson,
 } from "./ibrain.ts";
 
@@ -349,15 +349,16 @@ async function runPool<T>(attempts: Attempt<T>[], skip: number, timeoutMs: numbe
 function handleIbrain(r: Record<string, unknown>, skip: number): Promise<Response> | Response {
   const levelKey = r.levelKey;
   if (levelKey !== "pg" && levelKey !== "pn") return json({ error: "Malformed level key" }, 400);
-  const plan = IBRAIN_TERM1[levelKey];
-  if (r.action === "term") return json({ term: plan, scope: "all" });
+  const base = IBRAIN_TERM1[levelKey];
+  if (r.action === "term") return json({ term: base, scope: "all" });
 
   const week = Number(r.week), session = Number(r.session);
-  if (!Number.isInteger(week) || week < 1 || week > plan.weeks.length) return json({ error: "Malformed week" }, 400);
+  if (!Number.isInteger(week) || week < 1 || week > base.weeks.length) return json({ error: "Malformed week" }, 400);
   if (!Number.isInteger(session) || session < 1 || session > 3) return json({ error: "Malformed session" }, 400);
   const request: IbrainRequest = { levelKey, week, session };
 
   const catalogue = LEARNING_OUTCOMES[levelKey];
+  const plan = mergeEditedPlan(base, r.plan, catalogue);
   const prompt = buildIbrainPrompt(plan, request, catalogue);
   // Finalize inside parse so a structurally broken lesson counts as a provider failure and gets retried.
   const parse = (v: unknown) => {

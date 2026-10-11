@@ -157,7 +157,7 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `Wrap Up = recall and reinforce (a story, song, rhyme, word/phrase or action).\n\n` +
     `CLASS: ${plan.levelLabel}, a Singapore classroom of 18 children with 2 teachers. Developmental profile:\n- ` +
     `${plan.developmental.join("\n- ")}\n\n` +
-    `TERM 1: Wondering "${plan.wondering}". Story: "${plan.story}" by ${plan.author}. ${plan.connection} ` +
+    `TERM ${plan.term}: Wondering "${plan.wondering}". Story: "${plan.story}" by ${plan.author}. ${plan.connection} ` +
     `Character values (CDP): ${plan.cdpValues.join(", ")}. Language exposure: ${plan.languageExposure}\n\n` +
     `WEEK ${wk.week} of 8 - "${wk.title}". Story bite this week (ONLY this part of the story): ${wk.storyBite} ` +
     `Key language: ${wk.keyLanguage.join(", ")}. Song/chant idea: ${wk.song} SEC value focus: ${wk.secValue} (suggested ${wk.secCode}). ` +
@@ -249,7 +249,7 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
 
   return {
     id: spec.id,
-    title: `${plan.shortLabel} Term 1 iBrain Lesson ${req.week} - ${spec.id}`,
+    title: `${plan.shortLabel} Term ${plan.term} iBrain Lesson ${req.week} - ${spec.id}`,
     level: plan.level,
     week: req.week,
     session: req.session,
@@ -280,3 +280,57 @@ export const IBRAIN_MISTRAL_SHAPE =
   `"differentiation":{"support":"","stretch":""},"lookFors":["","",""],"rehearseRetrieve":{"teacherPrompt":"","extension":""}}. ` +
   `"link" must be one of: ${LINKS.join(" | ")}. "skill" must be one of: ${EF_SKILLS.join(" | ")}. ` +
   `disposition "name" must be one of: ${DISPOSITIONS.join(" | ")}.`;
+
+// Teacher-edited term plans arrive from the browser: copy only known text fields onto the
+// built-in plan (structure, illustration layouts and developmental notes stay authoritative),
+// cap lengths, and keep codes / EF skills only when they are valid for the level.
+const str = (v: unknown, fallback: string, max = 700): string =>
+  typeof v === "string" && v.trim() ? v.trim().slice(0, max) : fallback;
+const list = (v: unknown, fallback: string[]): string[] =>
+  Array.isArray(v) && v.some((x) => typeof x === "string" && x.trim())
+    ? v.filter((x) => typeof x === "string" && x.trim()).slice(0, 12).map((x: string) => x.trim().slice(0, 80))
+    : fallback;
+
+export function mergeEditedPlan(base: TermPlan, edited: unknown, catalogue: LearningOutcome[]): TermPlan {
+  if (!edited || typeof edited !== "object") return base;
+  const e = edited as Record<string, unknown>;
+  const codes = new Set(catalogue.map((o) => o.code));
+  const code = (v: unknown, fallback: string, domain: string) =>
+    typeof v === "string" && codes.has(v.trim()) && domainOf(v.trim()) === domain ? v.trim() : fallback;
+  const term = Number(e.term);
+  const eb = Array.isArray(e.blocks) ? e.blocks : [];
+  const ew = Array.isArray(e.weeks) ? e.weeks : [];
+  return {
+    ...base,
+    term: Number.isInteger(term) && term >= 1 && term <= 4 ? term : base.term,
+    story: str(e.story, base.story, 120),
+    author: str(e.author, base.author, 120),
+    wondering: str(e.wondering, base.wondering, 200),
+    connection: str(e.connection, base.connection),
+    focus: str(e.focus, base.focus),
+    languageExposure: str(e.languageExposure, base.languageExposure),
+    cdpValues: list(e.cdpValues, base.cdpValues),
+    blocks: base.blocks.map((b, i) => {
+      const x = (eb[i] && typeof eb[i] === "object" ? eb[i] : {}) as Record<string, unknown>;
+      return {
+        ...b,
+        title: str(x.title, b.title, 120), wondering: str(x.wondering, b.wondering, 200), focus: str(x.focus, b.focus),
+        setup: str(x.setup, b.setup, 1200), addOn: str(x.addOn, b.addOn, 900), safety: str(x.safety, b.safety),
+      };
+    }),
+    weeks: base.weeks.map((w, i) => {
+      const x = (ew[i] && typeof ew[i] === "object" ? ew[i] : {}) as Record<string, unknown>;
+      const ac = (x.artCraft && typeof x.artCraft === "object" ? x.artCraft : {}) as Record<string, unknown>;
+      const ef = Array.isArray(x.ef) && x.ef.length === 3 && x.ef.every((s) => (EF_SKILLS as readonly unknown[]).includes(s))
+        ? x.ef as [string, string, string] : w.ef;
+      return {
+        ...w,
+        title: str(x.title, w.title, 120), storyBite: str(x.storyBite, w.storyBite, 900), song: str(x.song, w.song),
+        keyLanguage: list(x.keyLanguage, w.keyLanguage), secValue: str(x.secValue, w.secValue, 120),
+        secCode: code(x.secCode, w.secCode, "SED"), llCode: code(x.llCode, w.llCode, "LL"),
+        rolePlay: str(x.rolePlay, w.rolePlay, 900), ef,
+        artCraft: { title: str(ac.title, w.artCraft.title, 120), description: str(ac.description, w.artCraft.description, 900) },
+      };
+    }),
+  };
+}

@@ -80,7 +80,7 @@
 
   async function loadTerm(level) {
     if (!terms[level]) {
-      termEl.replaceChildren(el("p", "muted", "Loading Term 1 plan…"));
+      termEl.replaceChildren(el("p", "muted", "Loading term plan…"));
       try {
         terms[level] = (await api({ action: "term", levelKey: level })).term;
       } catch (e) {
@@ -89,8 +89,8 @@
       }
     }
     if (levelSel.value !== level) return;
-    fillWeeks(terms[level]);
-    renderTerm(terms[level]);
+    fillWeeks(planFor(level));
+    renderTerm(planFor(level));
     renderResults();
   }
 
@@ -102,7 +102,7 @@
       o.value = String(w.week);
       weeksSel.appendChild(o);
     }
-    const all = el("option", null, "Whole Term 1 (8 weeks, 24 lessons)");
+    const all = el("option", null, `Whole Term ${termNo(term)} (8 weeks, 24 lessons)`);
     all.value = "all";
     weeksSel.appendChild(all);
     if ([...weeksSel.options].some((o) => o.value === prev)) weeksSel.value = prev;
@@ -132,7 +132,7 @@
       pending.set(k, "busy");
       running++;
       renderWeek(job.level, job.week);
-      api({ levelKey: job.level, week: job.week, session: job.session })
+      api({ levelKey: job.level, week: job.week, session: job.session, ...(edits[job.level] ? { plan: edits[job.level] } : {}) })
         .then((data) => {
           store[k] = data.lesson;
           saveStore();
@@ -159,7 +159,7 @@
   }
 
   $("#ib-generate").addEventListener("click", () => {
-    const level = levelSel.value, term = terms[level];
+    const level = levelSel.value, term = terms[level] && planFor(level);
     if (!term) return;
     const weeks = weeksSel.value === "all" ? term.weeks.map((w) => w.week) : [Number(weeksSel.value)];
     for (const w of weeks) for (const s of SESSIONS) enqueue(level, w, s);
@@ -214,27 +214,130 @@
     return t;
   }
 
+  // ===== term plan (editable) =====
+  const EDITS_KEY = "ibrain_plan_edits_v1";
+  let edits = (() => { try { return JSON.parse(localStorage.getItem(EDITS_KEY)) || {}; } catch { return {}; } })();
+  let editing = false;
+  const planFor = (level) => edits[level] || terms[level];
+  const termNo = (plan) => plan.term || 1;
+
+  // Illustrations are drawn for the built-in stories, so hide any whose story/set-up text was edited.
+  function weekArtOk(level, week) {
+    if (!edits[level]) return true;
+    const d = terms[level], p = edits[level], a = d.weeks[week - 1], b = p.weeks[week - 1];
+    return d.story === p.story && a.title === b.title && a.storyBite === b.storyBite;
+  }
+  function blockArtOk(level, i) {
+    if (!edits[level]) return true;
+    const d = terms[level], p = edits[level], a = d.blocks[i], b = p.blocks[i];
+    return d.story === p.story && a.title === b.title && a.setup === b.setup && a.addOn === b.addOn;
+  }
+  const artHidden = () => el("p", "ib-art-hidden", "Illustration hidden because this part of the plan was edited. Reset the plan to restore the original artwork.");
+
+  function ed(path, text, cls, tag = "span", list = false) {
+    const n = el(tag, cls, list ? text.join(", ") : String(text));
+    if (editing) {
+      n.contentEditable = "plaintext-only";
+      n.classList.add("ib-editable");
+      n.dataset.path = path;
+      if (list) n.dataset.list = "1";
+      n.setAttribute("role", "textbox");
+      n.setAttribute("aria-label", `Edit ${path.replace(/\./g, " ")}`);
+    }
+    return n;
+  }
+  const span = (...parts) => {
+    const d = el("div");
+    parts.forEach((x) => d.appendChild(typeof x === "string" ? document.createTextNode(x) : x));
+    return d;
+  };
+  function efCell(w, wi) {
+    if (!editing) return w.ef.join(" / ");
+    const d = el("div", "ib-ef-edit");
+    w.ef.forEach((v, j) => {
+      const sel = el("select");
+      sel.dataset.path = `weeks.${wi}.ef.${j}`;
+      sel.setAttribute("aria-label", `Week ${w.week} IB0${j + 1} EF focus`);
+      for (const o of ["Working Memory", "Inhibitory Control", "Cognitive Flexibility"]) {
+        const opt = el("option", null, `IB0${j + 1}: ${o}`);
+        opt.value = o;
+        opt.selected = o === v;
+        sel.appendChild(opt);
+      }
+      d.appendChild(sel);
+    });
+    return d;
+  }
+
+  function setPath(obj, path, value) {
+    const parts = path.split(".");
+    let o = obj;
+    for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+    o[parts[parts.length - 1]] = value;
+  }
+
+  function saveEdits(level) {
+    const plan = JSON.parse(JSON.stringify(planFor(level)));
+    for (const n of termEl.querySelectorAll("[data-path]")) {
+      let v = n.tagName === "SELECT" ? n.value : n.textContent.replace(/\s+/g, " ").trim();
+      if (n.dataset.list) v = v.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+      if (n.dataset.path === "term") v = Math.min(4, Math.max(1, parseInt(v, 10) || termNo(plan)));
+      if (Array.isArray(v) ? v.length : v !== "") setPath(plan, n.dataset.path, v);
+    }
+    if (JSON.stringify(plan) === JSON.stringify(terms[level])) delete edits[level]; else edits[level] = plan;
+    localStorage.setItem(EDITS_KEY, JSON.stringify(edits));
+  }
+
+  function editBar(level) {
+    const bar = el("div", "ib-edit-bar");
+    const btn = (label, cls, fn) => { const b = el("button", cls, label); b.addEventListener("click", fn); bar.appendChild(b); };
+    const rerender = () => { fillWeeks(planFor(level)); renderTerm(planFor(level)); renderResults(); };
+    if (editing) {
+      btn("Save changes", null, () => { saveEdits(level); editing = false; rerender(); });
+      btn("Cancel", "ghost-btn", () => { editing = false; rerender(); });
+      bar.appendChild(el("span", "muted", "Click any underlined text to change it. Separate list items with commas."));
+    } else {
+      btn("Edit term plan", "ghost-btn", () => { editing = true; renderTerm(planFor(level)); });
+      if (edits[level]) {
+        btn("Reset to original plan", "ghost-btn", () => {
+          if (!confirm("Discard your edits and restore the original term plan?")) return;
+          delete edits[level];
+          localStorage.setItem(EDITS_KEY, JSON.stringify(edits));
+          rerender();
+        });
+      }
+    }
+    return bar;
+  }
+
   function renderTerm(term) {
+    const level = term.level;
     const wrap = el("section", "ib-overview");
     const head = el("div", "ib-overview-head");
-    head.appendChild(el("h2", null, `${term.shortLabel} Term 1: ${term.story}`));
-    head.appendChild(el("p", "muted", `by ${term.author} · ${term.levelLabel}`));
+    const h2 = el("h2");
+    h2.append(`${term.shortLabel} Term `, ed("term", termNo(term)), ": ", ed("story", term.story));
+    head.appendChild(h2);
+    const by = el("p", "muted");
+    by.append("by ", ed("author", term.author), ` · ${term.levelLabel}`);
+    head.appendChild(by);
+    head.appendChild(editBar(level));
+    if (edits[level] && !editing) head.appendChild(el("p", "ib-edited-note", "You are using an edited plan. New lessons follow your changes; lessons already generated keep the plan they were written with."));
     const facts = el("dl", "ib-facts");
-    for (const [k, v] of [
-      ["Wondering", term.wondering],
-      ["Connection", term.connection],
-      ["Character values (CDP)", term.cdpValues.join(", ")],
-      ["Focus", term.focus],
-      ["Language exposure", term.languageExposure],
+    for (const [k, path, v, list] of [
+      ["Wondering", "wondering", term.wondering],
+      ["Connection", "connection", term.connection],
+      ["Character values (CDP)", "cdpValues", term.cdpValues, true],
+      ["Focus", "focus", term.focus],
+      ["Language exposure", "languageExposure", term.languageExposure],
     ]) {
       facts.appendChild(el("dt", null, k));
-      facts.appendChild(el("dd", null, v));
+      facts.appendChild(ed(path, v, null, "dd", list));
     }
     head.appendChild(facts);
     wrap.appendChild(head);
 
     const struct = el("details", "ib-details");
-    struct.open = levelLessons(term.level) === 0;
+    struct.open = levelLessons(level) === 0 && !editing;
     struct.appendChild(el("summary", null, "Weekly lesson structure (3 x 30 mins)"));
     const cols = el("div", "ib-structure");
     for (const s of STRUCTURE) {
@@ -252,46 +355,56 @@
     wrap.appendChild(struct);
 
     const trayD = el("details", "ib-details");
-    trayD.open = levelLessons(term.level) === 0;
+    trayD.open = levelLessons(level) === 0 || editing;
     trayD.appendChild(el("summary", null, "Tuff tray plan (4 set-ups x 2 weeks)"));
     trayD.appendChild(table(
       ["Weeks", "Focus & wondering", "Set-up (week 1) and add-on (week 2)", "Outcomes", "Vision"],
-      term.blocks.map((b) => {
+      term.blocks.map((b, i) => {
         const focus = el("div");
-        focus.appendChild(el("strong", null, b.title));
-        focus.appendChild(el("p", null, b.focus));
-        focus.appendChild(el("p", "ib-wonder", `Wondering: ${b.wondering}`));
+        focus.appendChild(ed(`blocks.${i}.title`, b.title, null, "strong"));
+        focus.appendChild(ed(`blocks.${i}.focus`, b.focus, null, "p"));
+        const wq = el("p", "ib-wonder", "Wondering: ");
+        wq.appendChild(ed(`blocks.${i}.wondering`, b.wondering));
+        focus.appendChild(wq);
         const setup = el("div");
-        setup.appendChild(el("p", null, b.setup));
-        setup.appendChild(el("p", "ib-addon", b.addOn));
-        setup.appendChild(el("p", "muted", `Safety: ${b.safety}`));
-        return [`${b.weeks[0]}-${b.weeks[1]}`, focus, setup, b.outcomes.join("\n"), svgBox(IBArt.tray(b, 2), "ib-thumb", `Tuff tray vision: ${b.title}`)];
+        setup.appendChild(ed(`blocks.${i}.setup`, b.setup, null, "p"));
+        setup.appendChild(ed(`blocks.${i}.addOn`, b.addOn, "ib-addon", "p"));
+        const sf = el("p", "muted", "Safety: ");
+        sf.appendChild(ed(`blocks.${i}.safety`, b.safety));
+        setup.appendChild(sf);
+        const vision = blockArtOk(level, i) ? svgBox(IBArt.tray(b, 2), "ib-thumb", `Tuff tray vision: ${b.title}`) : artHidden();
+        return [`${b.weeks[0]}-${b.weeks[1]}`, focus, setup, b.outcomes.join("\n"), vision];
       }),
     ));
     wrap.appendChild(trayD);
 
     const mapD = el("details", "ib-details");
-    mapD.open = levelLessons(term.level) === 0;
-    mapD.appendChild(el("summary", null, "Term 1 activity map (week by week)"));
+    mapD.open = levelLessons(level) === 0 || editing;
+    mapD.appendChild(el("summary", null, `Term ${termNo(term)} activity map (week by week)`));
     mapD.appendChild(table(
-      ["Week", "Story bite", "SEC value", "Role play (IB01)", "Art & craft (IB02/IB03)", "EF focus IB01 / 02 / 03"],
-      term.weeks.map((w) => [
-        `${w.week}. ${w.title}`,
-        w.storyBite,
-        `${w.secValue}\n${w.secCode}`,
-        w.rolePlay,
-        `${w.artCraft.title}: ${w.artCraft.description}`,
-        w.ef.join(" / "),
+      ["Week", "Story bite & language", "SEC value & codes", "Role play (IB01)", "Art & craft (IB02/IB03)", "EF focus IB01 / 02 / 03"],
+      term.weeks.map((w, i) => [
+        span(`${w.week}. `, ed(`weeks.${i}.title`, w.title)),
+        span(ed(`weeks.${i}.storyBite`, w.storyBite, null, "p"),
+          span(el("strong", null, "Key language: "), ed(`weeks.${i}.keyLanguage`, w.keyLanguage, null, "span", true)),
+          span(el("strong", null, "Song: "), ed(`weeks.${i}.song`, w.song))),
+        span(ed(`weeks.${i}.secValue`, w.secValue, null, "p"),
+          span("SEC: ", ed(`weeks.${i}.secCode`, w.secCode, "ib-code")),
+          span("C&L: ", ed(`weeks.${i}.llCode`, w.llCode, "ib-code"))),
+        ed(`weeks.${i}.rolePlay`, w.rolePlay, null, "div"),
+        span(ed(`weeks.${i}.artCraft.title`, w.artCraft.title, null, "strong"), ": ", ed(`weeks.${i}.artCraft.description`, w.artCraft.description)),
+        efCell(w, i),
       ]),
     ));
     wrap.appendChild(mapD);
+    if (editing) wrap.appendChild(editBar(level));
     termEl.replaceChildren(wrap);
     updateButtons();
   }
 
   // ===== results =====
   function renderResults() {
-    const level = levelSel.value, term = terms[level];
+    const level = levelSel.value, term = terms[level] && planFor(level);
     if (!term) return;
     resultsEl.replaceChildren();
     for (const w of term.weeks) {
@@ -304,7 +417,7 @@
   function renderWeek(level, week) {
     if (levelSel.value !== level || !terms[level]) return;
     const existing = document.getElementById(`ib-week-${level}-${week}`);
-    const fresh = weekSection(terms[level], terms[level].weeks[week - 1]);
+    const fresh = weekSection(planFor(level), planFor(level).weeks[week - 1]);
     if (existing) existing.replaceWith(fresh); else renderResults();
   }
 
@@ -323,7 +436,8 @@
 
     const res = el("div", "ib-resources");
     const sc = el("figure", "ib-figure");
-    sc.appendChild(svgBox(IBArt.scene(w.scene), "ib-art", `A3 scene card: ${w.scene.title}`));
+    const artOk = weekArtOk(term.level, w.week);
+    sc.appendChild(artOk ? svgBox(IBArt.scene(w.scene), "ib-art", `A3 scene card: ${w.scene.title}`) : artHidden());
     const cap = el("figcaption");
     cap.appendChild(el("strong", null, "A3 scene card for picture talk"));
     const ul = el("ul");
@@ -333,7 +447,9 @@
     res.appendChild(sc);
 
     const tf = el("figure", "ib-figure");
-    tf.appendChild(svgBox(IBArt.tray(block, w.week === block.weeks[0] ? 1 : 2), "ib-art", `Tuff tray vision: ${block.title}`));
+    tf.appendChild(blockArtOk(term.level, term.blocks.indexOf(block))
+      ? svgBox(IBArt.tray(block, w.week === block.weeks[0] ? 1 : 2), "ib-art", `Tuff tray vision: ${block.title}`)
+      : artHidden());
     const tcap = el("figcaption");
     tcap.appendChild(el("strong", null, `Tuff tray vision: ${block.title}`));
     tcap.appendChild(el("p", null, `Wondering: ${block.wondering}`));
@@ -343,7 +459,7 @@
 
     const words = el("div", "ib-words");
     words.setAttribute("aria-label", "Word cards");
-    w.words.forEach((wd, i) => words.appendChild(svgBox(IBArt.wordCard(wd, i), "ib-word", `Word card: ${wd.word}`)));
+    if (artOk) w.words.forEach((wd, i) => words.appendChild(svgBox(IBArt.wordCard(wd, i), "ib-word", `Word card: ${wd.word}`)));
     const wl = el("p", "ib-words-label", `Word cards · key language: ${w.keyLanguage.join(", ")}`);
     sec.appendChild(wl);
     sec.appendChild(words);
@@ -578,7 +694,7 @@
   }
 
   async function exportPptx() {
-    const level = levelSel.value, term = terms[level];
+    const level = levelSel.value, term = planFor(level);
     const lessons = Object.entries(store).filter(([k]) => k.startsWith(`${level}-`)).map(([, v]) => v)
       .sort((a, b) => a.week - b.week || a.session - b.session);
     if (!lessons.length) return;
@@ -604,11 +720,11 @@
 
       const cover = add();
       cover.addImage({ data: logo, x: 2.25, y: 1.6, w: 3.0, h: 1.93 });
-      cover.addText(`iBrain\n\n${term.shortLabel}\nTerm 1\nLesson Plans`, { x: 0.5, y: 4.0, w: 6.5, h: 3.2, align: "center", fontFace: P.face, fontSize: 32, bold: true, color: "000000" });
+      cover.addText(`iBrain\n\n${term.shortLabel}\nTerm ${termNo(term)}\nLesson Plans`, { x: 0.5, y: 4.0, w: 6.5, h: 3.2, align: "center", fontFace: P.face, fontSize: 32, bold: true, color: "000000" });
       cover.addText(`${term.story} by ${term.author}`, { x: 0.5, y: 7.4, w: 6.5, h: 0.5, align: "center", fontFace: P.face, fontSize: 14, italic: true });
 
       const ov = add();
-      ov.addText(`${term.shortLabel} Term 1 Overview`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 18, bold: true });
+      ov.addText(`${term.shortLabel} Term ${termNo(term)} Overview`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 18, bold: true });
       ov.addTable([
         [cellL("Wondering"), { text: term.wondering }],
         [cellL("Story"), { text: `${term.story} by ${term.author}` }],
@@ -621,7 +737,7 @@
       ], { ...TABLE_OPTS, colW: [1.6, 5.2] });
 
       addPagedTable(add, [
-        [{ text: `iBrain Tuff Tray Plan Term 1 (${term.shortLabel})`, options: { colspan: 4, bold: true, fontSize: 16, border: { type: "none" } } }],
+        [{ text: `iBrain Tuff Tray Plan Term ${termNo(term)} (${term.shortLabel})`, options: { colspan: 4, bold: true, fontSize: 16, border: { type: "none" } } }],
         [cellL("Weeks"), cellL("Focus & wondering"), cellL("Set-up and add-on"), cellL("Outcomes")],
         ...term.blocks.map((b) => [
           { text: `${b.weeks[0]}-${b.weeks[1]}` },
@@ -632,7 +748,7 @@
       ], { colW: [0.6, 1.9, 3.1, 1.2] }, 2);
 
       addPagedTable(add, [
-        [{ text: `Term 1 Activity Map (${term.shortLabel})`, options: { colspan: 5, bold: true, fontSize: 16, border: { type: "none" } } }],
+        [{ text: `Term ${termNo(term)} Activity Map (${term.shortLabel})`, options: { colspan: 5, bold: true, fontSize: 16, border: { type: "none" } } }],
         [cellL("Week"), cellL("Story bite"), cellL("SEC value / EF focus"), cellL("Role play (IB01)"), cellL("Art & craft (IB02/03)")],
         ...term.weeks.map((w) => [
           { text: `${w.week}. ${w.title}` },
@@ -647,15 +763,22 @@
       for (const wk of weeks) {
         for (const l of lessons.filter((x) => x.week === wk)) addPagedTable(add, lessonRows(l));
         const w = term.weeks[wk - 1], block = blockFor(term, wk);
-        const sceneImg = await IBArt.toPng(IBArt.scene(w.scene));
+        const sceneOk = weekArtOk(level, wk), trayOk = blockArtOk(level, term.blocks.indexOf(block));
+        if (!sceneOk && !trayOk) continue;
         const s1 = add();
-        s1.addText(`${term.shortLabel} Term 1 iBrain Lesson ${wk} - Resources`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
-        s1.addText("A3 scene card (print on A3 for picture talk)", { x: 0.35, y: 1.0, w: 6.8, h: 0.3, fontFace: P.face, fontSize: 11, bold: true });
-        s1.addImage({ data: sceneImg.data, x: 0.35, y: 1.35, w: 6.8, h: (6.8 * sceneImg.h) / sceneImg.w });
-        s1.addText(runs([{ text: "Picture talk questions:", options: { bold: true } }, ...w.scene.prompts.map((p) => `• ${p}`)]), { x: 0.35, y: 6.0, w: 6.8, h: 1.1, fontFace: P.face, fontSize: 10, valign: "top" });
-        const trayImg = await IBArt.toPng(IBArt.tray(block, wk === block.weeks[0] ? 1 : 2));
-        s1.addText(`Tuff tray vision: ${block.title} (${wk === block.weeks[0] ? "base set-up" : "set-up + add-on"})`, { x: 0.35, y: 7.1, w: 6.8, h: 0.3, fontFace: P.face, fontSize: 11, bold: true });
-        s1.addImage({ data: trayImg.data, x: 0.85, y: 7.4, w: 4.4, h: (4.4 * trayImg.h) / trayImg.w });
+        s1.addText(`${term.shortLabel} Term ${termNo(term)} iBrain Lesson ${wk} - Resources`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
+        if (sceneOk) {
+          const sceneImg = await IBArt.toPng(IBArt.scene(w.scene));
+          s1.addText("A3 scene card (print on A3 for picture talk)", { x: 0.35, y: 1.0, w: 6.8, h: 0.3, fontFace: P.face, fontSize: 11, bold: true });
+          s1.addImage({ data: sceneImg.data, x: 0.35, y: 1.35, w: 6.8, h: (6.8 * sceneImg.h) / sceneImg.w });
+          s1.addText(runs([{ text: "Picture talk questions:", options: { bold: true } }, ...w.scene.prompts.map((p) => `• ${p}`)]), { x: 0.35, y: 6.0, w: 6.8, h: 1.1, fontFace: P.face, fontSize: 10, valign: "top" });
+        }
+        if (trayOk) {
+          const trayImg = await IBArt.toPng(IBArt.tray(block, wk === block.weeks[0] ? 1 : 2));
+          s1.addText(`Tuff tray vision: ${block.title} (${wk === block.weeks[0] ? "base set-up" : "set-up + add-on"})`, { x: 0.35, y: 7.1, w: 6.8, h: 0.3, fontFace: P.face, fontSize: 11, bold: true });
+          s1.addImage({ data: trayImg.data, x: 0.85, y: 7.4, w: 4.4, h: (4.4 * trayImg.h) / trayImg.w });
+        }
+        if (!sceneOk) continue;
         const s2 = add();
         s2.addText(`Week ${wk} word cards`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
         for (let i = 0; i < w.words.length; i++) {
@@ -663,7 +786,7 @@
           s2.addImage({ data: img.data, x: 0.45 + (i % 2) * 3.35, y: 1.1 + Math.floor(i / 2) * 2.7, w: 3.1, h: (3.1 * img.h) / img.w });
         }
       }
-      await pptx.writeFile({ fileName: `iBrain ${term.shortLabel} Term 1 Lesson Plans.pptx` });
+      await pptx.writeFile({ fileName: `iBrain ${term.shortLabel} Term ${termNo(term)} Lesson Plans.pptx` });
     } catch (e) {
       globalError(`PowerPoint export failed: ${e.message}`);
     } finally {

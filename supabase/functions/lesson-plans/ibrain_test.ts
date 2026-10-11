@@ -72,3 +72,25 @@ Deno.test("prompt: IB02/IB03 concurrency + add-on week wording", () => {
   assert(p2.includes("EY.PG.LL"));
   assert(!p2.includes("EY.PN."));
 });
+
+Deno.test("mergeEditedPlan: keeps valid edits, rejects bad codes/EF and oversize text", async () => {
+  const { mergeEditedPlan } = await import("./ibrain.ts");
+  const base = IBRAIN_TERM1.pn;
+  const m = mergeEditedPlan(base, {
+    term: 2, story: "A Colour of His Own", cdpValues: ["Kindness", 5],
+    weeks: [{ title: "Chameleon", secCode: "EY.PN.LL.1.1", llCode: "EY.PN.LL.1.2", ef: ["Working Memory", "Bogus", "Inhibitory Control"], storyBite: "x".repeat(5000) }],
+    blocks: [{ setup: "" }],
+  }, LEARNING_OUTCOMES.pn);
+  assertEquals(m.term, 2);
+  assertEquals(m.story, "A Colour of His Own");
+  assertEquals(m.cdpValues, ["Kindness"]);
+  assertEquals(m.weeks[0].title, "Chameleon");
+  assertEquals(m.weeks[0].secCode, base.weeks[0].secCode); // LL code is not a valid SEC code
+  assertEquals(m.weeks[0].llCode, "EY.PN.LL.1.2");
+  assertEquals(m.weeks[0].ef, base.weeks[0].ef);
+  assertEquals(m.weeks[0].storyBite.length, 900);
+  assertEquals(m.blocks[0].setup, base.blocks[0].setup);
+  assertEquals(m.weeks[1], base.weeks[1]);
+  assertEquals(m.blocks[0].materials, base.blocks[0].materials);
+  assertEquals(mergeEditedPlan(base, null, LEARNING_OUTCOMES.pn), base);
+});
