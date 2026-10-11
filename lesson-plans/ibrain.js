@@ -3,7 +3,7 @@
 
 (() => {
   const STORE_KEY = "ibrain_lessons_v1";
-  const CONCURRENCY = 3;
+  const CONCURRENCY = 4;
   const SESSIONS = [1, 2, 3];
   const SESSION_ID = { 1: "IB01", 2: "IB02", 3: "IB03" };
   const STRUCTURE = [
@@ -22,7 +22,7 @@
     "Cognitive Flexibility": "chip-ef",
   };
 
-  const levelSel = $("#ib-level"), weeksSel = $("#ib-weeks");
+  const levelSel = $("#ib-level");
   const termEl = $("#ib-term"), resultsEl = $("#ib-results");
   const terms = {};
   const pending = new Map(); // key -> "queued" | "busy" | error message
@@ -90,23 +90,8 @@
       }
     }
     if (levelSel.value !== level) return;
-    fillWeeks(planFor(level));
     renderTerm(planFor(level));
     renderResults();
-  }
-
-  function fillWeeks(term) {
-    const prev = weeksSel.value;
-    weeksSel.replaceChildren();
-    for (const w of term.weeks) {
-      const o = el("option", null, `Week ${w.week}: ${w.title} (3 lessons)`);
-      o.value = String(w.week);
-      weeksSel.appendChild(o);
-    }
-    const all = el("option", null, `Whole Term ${termNo(term)} (8 weeks, 24 lessons)`);
-    all.value = "all";
-    weeksSel.appendChild(all);
-    if ([...weeksSel.options].some((o) => o.value === prev)) weeksSel.value = prev;
   }
 
   levelSel.value = localStorage.getItem("ibrain_level") || "pn";
@@ -140,7 +125,14 @@
           pending.delete(k);
         })
         .catch((e) => {
-          if (!/providers are busy|quota|rate limit/i.test(e.message)) { pending.set(k, e.message); return; }
+          const quota = /providers are busy|quota|rate limit/i.test(e.message);
+          if (!quota && !job.retried && !/password/i.test(e.message)) {
+            // Transient failure (timeout / malformed output): retry once automatically before showing an error.
+            pending.set(k, "queued");
+            queue.push({ ...job, retried: true });
+            return;
+          }
+          if (!quota) { pending.set(k, e.message); return; }
           // Out of AI quota: stop hammering the providers; queued lessons wait for a manual retry.
           const msg = "The free AI limit has been reached for now. Saved lessons are kept; press Retry in a little while (daily limits reset overnight).";
           pending.set(k, msg);
@@ -162,11 +154,17 @@
   $("#ib-generate").addEventListener("click", () => {
     const level = levelSel.value, term = terms[level] && planFor(level);
     if (!term) return;
-    const weeks = weeksSel.value === "all" ? term.weeks.map((w) => w.week) : [Number(weeksSel.value)];
-    for (const w of weeks) for (const s of SESSIONS) enqueue(level, w, s);
+    // Whole term at once; already-saved lessons are kept unless the teacher asks to redo everything.
+    const all = term.weeks.flatMap((w) => SESSIONS.map((s) => [w.week, s]));
+    let todo = all.filter(([w, s]) => !store[key(level, w, s)]);
+    if (!todo.length) {
+      if (!confirm(`All ${all.length} lessons are already generated. Regenerate the whole term? (Saved lessons are replaced as new ones arrive.)`)) return;
+      todo = all;
+    }
+    for (const [w, s] of todo) enqueue(level, w, s);
     renderResults();
     pump();
-    document.getElementById(`ib-week-${level}-${weeks[0]}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById(`ib-week-${level}-${todo[0][0]}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   $("#ib-clear").addEventListener("click", () => {
@@ -184,7 +182,7 @@
     const left = [...pending].filter(([k, v]) => k.startsWith(`${level}-`) && (v === "busy" || v === "queued")).length;
     $("#ib-pptx").disabled = !has || left > 0;
     $("#ib-clear").disabled = !has || left > 0;
-    $("#ib-generate").textContent = left ? `Generating… ${left} lesson${left > 1 ? "s" : ""} left` : "Generate lesson plans";
+    $("#ib-generate").textContent = left ? `Generating… ${left} lesson${left > 1 ? "s" : ""} left` : "Generate Term (8 weeks)";
     $("#ib-generate").disabled = left > 0;
   }
 
@@ -292,7 +290,7 @@
   function editBar(level) {
     const bar = el("div", "ib-edit-bar");
     const btn = (label, cls, fn) => { const b = el("button", cls, label); b.addEventListener("click", fn); bar.appendChild(b); };
-    const rerender = () => { fillWeeks(planFor(level)); renderTerm(planFor(level)); renderResults(); };
+    const rerender = () => { renderTerm(planFor(level)); renderResults(); };
     if (editing) {
       btn("Save changes", null, () => { saveEdits(level); editing = false; rerender(); });
       btn("Cancel", "ghost-btn", () => { editing = false; rerender(); });
