@@ -15,6 +15,7 @@
     "Objective 1 (Communication & Language)": "chip-ll",
     "Objective 2 (SEC)": "chip-sec",
     "Objective 3 (Learning Domain)": "chip-dom",
+    "Objective 4 (ACE - Art & Craft)": "chip-ace",
     Disposition: "chip-disp",
     "Working Memory": "chip-ef",
     "Inhibitory Control": "chip-ef",
@@ -542,12 +543,13 @@
     l.efSkills.forEach((e) => { const li = el("li"); li.appendChild(el("strong", null, `${e.skill}: `)); li.appendChild(document.createTextNode(e.how)); ef.appendChild(li); });
     row(t, "Disposition (PRAISE)", frag(el("strong", null, l.disposition.name), el("br"), l.disposition.description), "Executive Functioning Skills", ef);
     const ol = el("ol", "ib-objectives");
-    const objCls = ["chip-ll", "chip-sec", "chip-dom"];
+    const objCls = ["chip-ll", "chip-sec", "chip-dom", "chip-ace"];
     l.objectives.forEach((o, i) => {
       const li = el("li");
       li.appendChild(chip(o.label, objCls[i]));
       li.appendChild(document.createTextNode(` ${o.text} `));
       li.appendChild(el("span", "ib-code", `(${o.code})`));
+      if (o.goal) li.appendChild(el("span", "ib-goal", `Learning goal: ${o.goal}`));
       ol.appendChild(li);
     });
     row(t, "Lesson Objectives", frag(el("p", "ib-cwbat", "Children will be able to:"), ol));
@@ -616,7 +618,7 @@
     ]);
     rows.push([cellL("Lesson Objectives"), span3([
       { text: "Children will be able to:", options: { bold: true } },
-      ...l.objectives.map((o, i) => `${i + 1}. [${o.label}] ${o.text} (${o.code})`),
+      ...l.objectives.map((o, i) => `${i + 1}. [${o.label}] ${o.text} (${o.code})${o.goal ? ` | Learning goal: ${o.goal}` : ""}`),
     ])]);
     if (l.groupRotation) rows.push([cellL("Group Organisation"), span3([l.groupRotation, { text: l.trayStage, options: { italic: true } }])]);
     for (const s of l.steps) {

@@ -11,7 +11,7 @@ export const DISPOSITIONS = [
 export const EF_SKILLS = ["Working Memory", "Inhibitory Control", "Cognitive Flexibility"] as const;
 const LINKS = [
   "Objective 1 (Communication & Language)", "Objective 2 (SEC)", "Objective 3 (Learning Domain)",
-  "Disposition", ...EF_SKILLS,
+  "Objective 4 (ACE - Art & Craft)", "Disposition", ...EF_SKILLS,
 ] as const;
 
 interface SessionSpec { id: string; type: string; typeName: string; steps: [string, number][] }
@@ -39,6 +39,12 @@ const DOMAIN_NAMES: Record<string, string> = {
   PD: "Physical Development (PD)",
 };
 const domainOf = (code: string): string => code.split(".")[2];
+const ACE_GOALS: Record<string, string> = {
+  "ACE.1": "EY.ACE.1 Enjoy art and music and movement activities",
+  "ACE.2": "EY.ACE.2 Express ideas and feelings through art and music and movement",
+  "ACE.3": "EY.ACE.3 Create art and music and movement through experimentation and imagination",
+  "ACE.4": "EY.ACE.4 Share ideas and feelings about art and music and movement",
+};
 // SMART "measurable" check: an explicit count/criterion must appear in every AI-written objective.
 export const MEASURABLE = /\b(\d+|one|two|three|four|five|at least|every|all)\b/i;
 
@@ -73,7 +79,7 @@ export function ibrainSchema(validCodes: string[], session: number) {
         items: { type: "OBJECT", properties: { skill: { type: "STRING", enum: [...EF_SKILLS] }, how: str }, required: ["skill", "how"] },
       },
       objectives: {
-        type: "ARRAY", minItems: 3, maxItems: 3,
+        type: "ARRAY", minItems: session === 1 ? 3 : 4, maxItems: session === 1 ? 3 : 4,
         items: { type: "OBJECT", properties: { code: { type: "STRING", enum: validCodes }, text: str }, required: ["code", "text"] },
       },
       steps: {
@@ -164,12 +170,19 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `Suggested C&L code: ${wk.llCode}. Primary executive functioning skill for this lesson: ${ef}.\n\n` +
     `LESSON: ${spec.id}, ${spec.typeName}. Template steps in this exact order: ${steps}, followed by Rehearse and Retrieve.\n` +
     `${sessionGuidance(plan, wk, block, req.session)}\n\n` +
+    `TUFF TRAY RULE: tray set-ups must be mess-free - no sand, water, mud, paint, slime, shaving foam, cornflour, rice or real ice ` +
+    `at the tray; use fabrics, felt, loose parts, sealed sensory bags and playdough. (Paint and glue belong only at the Art & Craft table.)\n\n` +
     `STORYTELLING RULES: never read the whole book again and again. Deliver only this week's bite in bite-size, meaningful ` +
     `engagement: picture talk on the A3 scene card, puppets, props, songs, sound words, movement, and scene discussion questions.\n\n` +
-    `OBJECTIVES - exactly 3, in this order:\n` +
+    `OBJECTIVES - exactly ${req.session === 1 ? 3 : 4}, in this order:\n` +
     `1. Communication & Language objective using an EY.${levelCode}.LL code.\n` +
     `2. SEC objective using an EY.${levelCode}.SED code that matches this week's value.\n` +
-    `3. One learning-domain objective using an EY.${levelCode}.ACE, NE, NUM or PD code that matches the main activity.\n` +
+    (req.session === 1
+      ? `3. One learning-domain objective using an EY.${levelCode}.ACE, NE, NUM or PD code that matches the main activity.\n`
+      : `3. One learning-domain objective for the TUFF TRAY using an EY.${levelCode}.NE, NUM, PD or ACE code that matches the tray focus.\n` +
+        `4. One Aesthetics and Creative Expression objective for the ART & CRAFT activity using a DIFFERENT EY.${levelCode}.ACE code ` +
+        `(learning goals: ACE.1 enjoy art, music and movement; ACE.2 express ideas and feelings through art; ACE.3 create through ` +
+        `experimentation and imagination; ACE.4 share ideas and feelings about art). It must name this week's art & craft materials or technique.\n`) +
     `Each "text" is ONE SMART sentence starting with an observable action verb ("Children will be able to" is implied) and ` +
     `MUST contain all four parts: [observable verb + what] + [a NUMBER criterion, e.g. "at least 2", "1 turn", "3 of 4"] + ` +
     `[this lesson's material/story context] + [when: "during Role Play", "at the Tuff Tray", "by the end of the lesson"]. ` +
@@ -191,7 +204,10 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `disposition or which EF skill this step deliberately builds and HOW. Across the lesson, every objective, the disposition and ` +
     `every EF skill listed must be intentionally planned in at least one step.\n` +
     `- differentiation: support (for a hesitant or younger child) and stretch (for a confident child).\n` +
-    `- lookFors: exactly 3 observable success criteria, one per objective, in the same order, phrased so a teacher can tick them.\n` +
+    `- lookFors: exactly ${req.session === 1 ? 3 : 4} observable success criteria, one per objective, in the same order, phrased so a teacher can tick them.\n` +
+    (req.session === 1 ? "" : `- In the "Art and Craft / Tuffy Play" step, the "Art & Craft:" lines must show how the ACE objective (Objective 4) and its ` +
+      `learning goal are intentionally taught (modelling the technique, open-ended choices, talking about their art), and that step's ` +
+      `intentional list must include "Objective 4 (ACE - Art & Craft)".\n`) +
     `- rehearseRetrieve: teacherPrompt = how teachers revisit THIS week's story language/sound words during daily routines and ` +
     `transitions (quote what the teacher says); extension = a home or outdoor link using Singapore places/experiences where ` +
     `natural. Never suggest coins, beads, buttons, batteries or other choking hazards.\n` +
@@ -235,8 +251,22 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
   const objectives = [
     pick((d) => d === "LL", wk.llCode, "Communication & Language"),
     pick((d) => d === "SED", wk.secCode, "Social-Emotional Competencies (SEC)"),
-    pick((d) => d !== "LL" && d !== "SED", block.domainCode, "Learning Domain"),
+    pick((d) => d !== "LL" && d !== "SED", block.domainCode, req.session === 1 ? "Learning Domain" : "Learning Domain (Tuff Tray)"),
   ];
+  if (req.session > 1) {
+    // Art & Craft ACE objective: the AI's 4th objective if it is ACE, else any other ACE objective it wrote.
+    const used = objectives[2].code;
+    const fourth = raw.objectives[3];
+    const ace = fourth && byCode.has(fourth.code) && domainOf(fourth.code) === "ACE" && fourth.code !== used
+      ? fourth
+      : valid.find((x) => domainOf(x.code) === "ACE" && x.code !== used);
+    const fallback = `EY.${plan.level.toUpperCase()}.ACE.2.1`;
+    const code = ace ? ace.code : fallback;
+    const text = clean(ace?.text).replace(/\s*\((?:EY|PS)\.[^)]*\)\s*\.?$/, "") || byCode.get(code)?.en || "";
+    if (ace && !MEASURABLE.test(text)) throw new Error(`objective ${code} has no measurable criterion`);
+    objectives.push({ label: "Aesthetics & Creative Expression (Art & Craft)", code, text: text.replace(/^children will be able to\s*/i, "").replace(/^./, (c) => c.toUpperCase()) });
+  }
+  const withGoals = objectives.map((o) => ({ ...o, goal: ACE_GOALS[o.code.split(".").slice(2, 4).join(".")] || null }));
 
   const efSeen = new Set<string>();
   const efSkills = (raw.efSkills || [])
@@ -263,23 +293,23 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
     learningDomains: [...new Set(objectives.map((o) => DOMAIN_NAMES[domainOf(o.code)]).filter(Boolean))],
     disposition,
     efSkills,
-    objectives,
+    objectives: withGoals,
     steps,
     groupRotation: groupRotation(req.session),
     trayStage: req.session === 1 ? null : req.week === block.weeks[1] ? "Week 2 of block: same set-up + add-on" : "Week 1 of block: base set-up",
     differentiation: { support: clean(raw.differentiation?.support), stretch: clean(raw.differentiation?.stretch) },
-    lookFors: cleanArr(raw.lookFors).slice(0, 3),
+    lookFors: cleanArr(raw.lookFors).slice(0, objectives.length),
     rehearseRetrieve: { teacherPrompt: clean(raw.rehearseRetrieve?.teacherPrompt), extension: clean(raw.rehearseRetrieve?.extension) },
   };
 }
 
 export const IBRAIN_MISTRAL_SHAPE =
   `Respond ONLY with one JSON object: {"lessonTitle":"","disposition":{"name":"","description":""},` +
-  `"efSkills":[{"skill":"","how":""}],"objectives":[{"code":"","text":""},{"code":"","text":""},{"code":"","text":""}],` +
+  `"efSkills":[{"skill":"","how":""}],"objectives":[{"code":"","text":""},{"code":"","text":""},{"code":"","text":""},{"code":"","text":""}],` +
   `"steps":[{"name":"","materials":[""],"process":[""],"intentional":[{"link":"","how":""}]}],` +
   `"differentiation":{"support":"","stretch":""},"lookFors":["","",""],"rehearseRetrieve":{"teacherPrompt":"","extension":""}}. ` +
   `"link" must be one of: ${LINKS.join(" | ")}. "skill" must be one of: ${EF_SKILLS.join(" | ")}. ` +
-  `disposition "name" must be one of: ${DISPOSITIONS.join(" | ")}.`;
+  `disposition "name" must be one of: ${DISPOSITIONS.join(" | ")}. Give exactly as many objectives as the instructions require (3 for IB01, 4 for IB02/IB03).`;
 
 // Teacher-edited term plans arrive from the browser: copy only known text fields onto the
 // built-in plan (structure, illustration layouts and developmental notes stay authoritative),

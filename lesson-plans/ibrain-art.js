@@ -84,6 +84,16 @@ const IBArt = (() => {
       case "sand":
         return `<path d="M${-2.4 * u} ${0.6 * u} Q${-2 * u} ${-1.2 * u} 0 ${-1 * u} Q${1.8 * u} ${-0.9 * u} ${1.6 * u} ${0.9 * u} Q0 ${1.6 * u} ${-2.4 * u} ${0.6 * u}Z" fill="#F3D9A4"/>` +
           Array.from({ length: 14 }, (_, i) => `<circle cx="${(((i * 37) % 30) / 10 - 1.6) * u}" cy="${(((i * 23) % 16) / 10 - 0.7) * u}" r="${0.05 * u}" fill="#C9A86A"/>`).join("");
+      case "feltmat":
+        return `<path d="M${-2.3 * u} ${0.6 * u} Q${-2 * u} ${-1.1 * u} 0 ${-0.95 * u} Q${1.7 * u} ${-0.85 * u} ${1.5 * u} ${0.85 * u} Q0 ${1.5 * u} ${-2.3 * u} ${0.6 * u}Z" fill="#E8CFA0"/>` +
+          `<path d="M${-1.9 * u} ${0.5 * u} Q${-1.7 * u} ${-0.8 * u} 0 ${-0.7 * u} Q${1.4 * u} ${-0.6 * u} ${1.2 * u} ${0.7 * u} Q0 ${1.2 * u} ${-1.9 * u} ${0.5 * u}Z" fill="none" stroke="#fff" stroke-width="${0.06 * u}" stroke-dasharray="${0.15 * u} ${0.12 * u}"/>`;
+      case "gelbag":
+        return `<rect x="${-0.8 * u}" y="${-0.55 * u}" width="${1.6 * u}" height="${1.1 * u}" rx="${0.15 * u}" fill="#7B5236" fill-opacity=".85" stroke="#CFD8DC" stroke-width="${0.08 * u}"/>` +
+          `<path d="M${-0.4 * u} ${-0.1 * u} q${0.3 * u} ${-0.25 * u} ${0.6 * u} 0 M${-0.2 * u} ${0.25 * u} q${0.3 * u} ${-0.2 * u} ${0.55 * u} 0" stroke="#A1887F" stroke-width="${0.06 * u}" fill="none" stroke-linecap="round"/>` +
+          [[-0.8, -0.55], [0.8, -0.55], [-0.8, 0.55], [0.8, 0.55]].map(([x, y]) => `<rect x="${(x - 0.15) * u}" y="${(y - 0.08) * u}" width="${0.3 * u}" height="${0.16 * u}" fill="#FFF8E1" opacity=".9" transform="rotate(${x * y > 0 ? 35 : -35} ${x * u} ${y * u})"/>`).join("");
+      case "dough":
+        return `<path d="M${-0.7 * u} ${0.1 * u} Q${-0.75 * u} ${-0.5 * u} ${-0.1 * u} ${-0.5 * u} Q${0.7 * u} ${-0.55 * u} ${0.7 * u} 0 Q${0.65 * u} ${0.5 * u} 0 ${0.45 * u} Q${-0.65 * u} ${0.5 * u} ${-0.7 * u} ${0.1 * u}Z" fill="#8D5B3E" stroke="#5D3A26" stroke-width="${0.05 * u}"/>` +
+          `<ellipse cx="${-0.15 * u}" cy="0" rx="${0.14 * u}" ry="${0.08 * u}" fill="#5D3A26"/><ellipse cx="${0.22 * u}" cy="${0.12 * u}" rx="${0.14 * u}" ry="${0.08 * u}" fill="#5D3A26"/>`;
       case "coral":
         return `<g stroke="${c}" stroke-width="${0.28 * u}" stroke-linecap="round" fill="none"><path d="M0 ${0.8 * u} L0 ${-0.2 * u} M0 ${0.2 * u} L${-0.5 * u} ${-0.5 * u} M0 ${0.1 * u} L${0.55 * u} ${-0.45 * u} M${-0.5 * u} ${-0.5 * u} L${-0.5 * u} ${-0.9 * u} M${0.55 * u} ${-0.45 * u} L${0.7 * u} ${-0.85 * u}"/></g>`;
       case "rock":
@@ -221,6 +231,8 @@ const IBArt = (() => {
       case "mud": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#6D4C41"/>` +
         Array.from({ length: 16 }, () => `<ellipse cx="${(cx + (r() - 0.5) * 1.6 * R).toFixed(1)}" cy="${(cy + (r() - 0.5) * 1.6 * R).toFixed(1)}" rx="${(10 + r() * 30).toFixed(1)}" ry="${(6 + r() * 14).toFixed(1)}" fill="${r() > 0.5 ? "#5D4037" : "#8D6E63"}"/>`).join("") +
         Array.from({ length: 10 }, () => `<path d="M${(cx + (r() - 0.5) * 1.5 * R).toFixed(1)} ${(cy + (r() - 0.5) * 1.5 * R).toFixed(1)} q8 -6 16 0" stroke="#BCAAA4" stroke-width="3" fill="none" stroke-linecap="round"/>`).join("");
+      case "feltbrown": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#C49A6C"/>` +
+        [0.35, 0.6, 0.85].map((k) => `<circle cx="${cx}" cy="${cy}" r="${(k * R).toFixed(1)}" fill="none" stroke="#B0885C" stroke-width="2" stroke-dasharray="10 8"/>`).join("");
       case "snow": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#E3F2FD"/>` + strokes(40, ["#FFFFFF", "#BBDEFB"], 18, 6);
       case "journey": {
         const zones = [["#6BBF59", "grass"], ["#4FA3E3", "river"], ["#6D4C41", "mud"], ["#2E7D32", "forest"], ["#ECEFF1", "snow"], ["#37474F", "cave"]];

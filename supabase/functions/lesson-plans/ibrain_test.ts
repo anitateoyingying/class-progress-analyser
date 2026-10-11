@@ -94,3 +94,37 @@ Deno.test("mergeEditedPlan: keeps valid edits, rejects bad codes/EF and oversize
   assertEquals(m.blocks[0].materials, base.blocks[0].materials);
   assertEquals(mergeEditedPlan(base, null, LEARNING_OUTCOMES.pn), base);
 });
+
+Deno.test("finalize: IB02/IB03 get a 4th ACE objective for Art & Craft with its learning goal", () => {
+  const plan = IBRAIN_TERM1.pn;
+  const steps = ["Tuning In", "Storytelling", "Art and Craft / Tuffy Play", "Cleaning Up", "Cooling Down", "Wrap Up"].map((name) => ({ name, materials: [], process: ["p"], intentional: [{ link: "Objective 4 (ACE - Art & Craft)", how: "h" }] }));
+  const base = {
+    lessonTitle: "t", disposition: { name: "Engagement", description: "d" }, efSkills: [], steps,
+    differentiation: { support: "", stretch: "" }, lookFors: ["a", "b", "c", "d"], rehearseRetrieve: { teacherPrompt: "", extension: "" },
+  };
+  const raw = { ...base, objectives: [
+    { code: "EY.PN.LL.1.3", text: "Name 2 creatures" }, { code: "EY.PN.SED.6.1", text: "Ask 1 question" },
+    { code: "EY.PN.NE.2.1", text: "Sort 3 shells" }, { code: "EY.PN.ACE.2.1", text: "Sponge-print at least 3 waves" },
+  ] } as RawIbrainLesson;
+  const l = finalizeIbrainLesson(raw, plan, { levelKey: "pn", week: 1, session: 2 }, LEARNING_OUTCOMES.pn);
+  assertEquals(l.objectives.map((o) => o.code), ["EY.PN.LL.1.3", "EY.PN.SED.6.1", "EY.PN.NE.2.1", "EY.PN.ACE.2.1"]);
+  assertEquals(l.objectives[3].goal, "EY.ACE.2 Express ideas and feelings through art and music and movement");
+  assertEquals(l.steps[2].intentional.length, 1);
+  assert(l.learningDomains.includes("Aesthetics and Creative Expression (ACE)"));
+  assertEquals(l.lookFors.length, 4);
+  // no ACE supplied -> registry fallback
+  const noAce = { ...base, objectives: raw.objectives.slice(0, 3) } as RawIbrainLesson;
+  assertEquals(finalizeIbrainLesson(noAce, plan, { levelKey: "pn", week: 1, session: 3 }, LEARNING_OUTCOMES.pn).objectives[3].code, "EY.PN.ACE.2.1");
+});
+
+Deno.test("scaffold: tuff tray set-ups are mess-free", () => {
+  for (const level of ["pg", "pn"] as const) {
+    for (const b of IBRAIN_TERM1[level].blocks) {
+      const text = [b.setup, b.addOn, ...b.materials.map((m) => m.label)].join(" ").toLowerCase()
+        .replace(/no (sand|real water|water|real ice)[^.;]*/g, "");
+      for (const bad of [" sand", "cornflour", "squeeze", "pipette", "coloured water", "tub of", "warm water", "shredded"]) {
+        assert(!text.includes(bad), `${b.id} mentions ${bad}`);
+      }
+    }
+  }
+});
