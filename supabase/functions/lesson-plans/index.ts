@@ -15,7 +15,14 @@ const GEMINI_KEYS = [
   Deno.env.get("GEMINI_API_KEY") || "",
 ].filter(Boolean);
 const MISTRAL_API_KEY = Deno.env.get("MISTRAL_API_KEY") || "";
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+// Each model has its own free daily quota, so more models = more free capacity.
+// Order: strongest free models first, lighter ones as overflow (probed 2026-10-11 on the free tier).
+const GEMINI_MODELS = [
+  "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-3-flash-preview", "gemini-3.7-flash",
+  "gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest",
+];
+// Gemma runs on the same key with a far larger free allowance but has no JSON mode: prompt for JSON, parse the text.
+const GEMMA_MODELS = ["gemma-4-26b-a4b-it"];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -205,18 +212,22 @@ function buildPrompt(req: LessonRequest, catalogue: LearningOutcome[]): string {
   );
 }
 
-interface GeminiOpts { schema: unknown; maxTokens: number; thinkingBudget?: number }
+interface GeminiOpts { schema: unknown; maxTokens: number; thinkingBudget?: number; plain?: boolean }
+
+function extractJson(text: string): unknown {
+  const t = text.replace(/```(?:json)?/g, "");
+  const start = t.search(/[[{]/);
+  const end = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+  return JSON.parse(start >= 0 && end > start ? t.slice(start, end + 1) : t);
+}
 
 async function callGemini<T>(
   key: string, model: string, prompt: string, opts: GeminiOpts, parse: (v: unknown) => T | null, signal: AbortSignal,
 ): Promise<ProviderResult<T>> {
-  const generationConfig: Record<string, unknown> = {
-    temperature: 0.6,
-    maxOutputTokens: opts.maxTokens,
-    responseMimeType: "application/json",
-    responseSchema: opts.schema,
-  };
-  if (opts.thinkingBudget != null) generationConfig.thinkingConfig = { thinkingBudget: opts.thinkingBudget };
+  const generationConfig: Record<string, unknown> = opts.plain
+    ? { temperature: 0.6, maxOutputTokens: Math.min(opts.maxTokens, 8192) }
+    : { temperature: 0.6, maxOutputTokens: opts.maxTokens, responseMimeType: "application/json", responseSchema: opts.schema };
+  if (opts.thinkingBudget != null && model.startsWith("gemini-2.5")) generationConfig.thinkingConfig = { thinkingBudget: opts.thinkingBudget };
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
@@ -235,7 +246,7 @@ async function callGemini<T>(
     if (!text) return { error: `Gemini ${model}: empty response` };
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = opts.plain ? extractJson(text) : JSON.parse(text);
     } catch {
       return { error: `Gemini ${model}: unparseable output` };
     }
@@ -291,6 +302,14 @@ function buildAttempts<T>(
       attempts.push({
         label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
         run: (signal) => callGemini(key, model, prompt, gemini, parse, signal),
+      });
+    });
+  }
+  for (const model of GEMMA_MODELS) {
+    GEMINI_KEYS.forEach((key, k) => {
+      attempts.push({
+        label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
+        run: (signal) => callGemini(key, model, `${mistral.system}\n\n${mistral.prompt}`, { ...gemini, plain: true }, parse, signal),
       });
     });
   }
