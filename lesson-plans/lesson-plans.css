@@ -191,3 +191,4 @@
 @media (prefers-color-scheme: dark) { .ib-edited-note { background: #4a3514; color: #fbd9a0; } }
 .chip-ace { background: #fde4f1; color: #8a1a5c; border-color: #f0a8cf; }
 .ib-goal { display: block; font-size: 0.8rem; color: var(--text-secondary); font-style: italic; margin-top: 0.15rem; }
+.ib-parallel { font-size: 0.82rem; font-style: italic; color: var(--text-secondary); margin-bottom: 0.3rem; }

@@ -14,7 +14,9 @@ const LINKS = [
   "Objective 4 (ACE - Art & Craft)", "Disposition", ...EF_SKILLS,
 ] as const;
 
-interface SessionSpec { id: string; type: string; typeName: string; steps: [string, number][] }
+// Art and Craft and Tuffy Play run side by side (two groups of 9), so their 13 minutes overlap.
+const PAR = "runs at the same time as the other group; groups swap in IB03";
+interface SessionSpec { id: string; type: string; typeName: string; steps: [string, number, string?][] }
 const SESSIONS: Record<number, SessionSpec> = {
   1: {
     id: "IB01", type: "A", typeName: "Lesson A: The Narrative & Connection to Story",
@@ -22,11 +24,11 @@ const SESSIONS: Record<number, SessionSpec> = {
   },
   2: {
     id: "IB02", type: "B", typeName: "Lesson B: The Sensory Construction - Art & Craft / Tuff Tray",
-    steps: [["Tuning In", 3], ["Storytelling", 4], ["Art and Craft / Tuffy Play", 13], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]],
+    steps: [["Tuning In", 3], ["Storytelling", 4], ["Art and Craft", 13, PAR], ["Tuffy Play", 13, PAR], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]],
   },
   3: {
     id: "IB03", type: "C", typeName: "Lesson C: The Sensory Construction - Art & Craft / Tuff Tray",
-    steps: [["Tuning In", 3], ["Storytelling", 4], ["Art and Craft / Tuffy Play", 13], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]],
+    steps: [["Tuning In", 3], ["Storytelling", 4], ["Art and Craft", 13, PAR], ["Tuffy Play", 13, PAR], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]],
   },
 };
 
@@ -133,8 +135,10 @@ function sessionGuidance(plan: TermPlan, wk: WeekPlan, block: TuffBlock, session
   }
   return `This is ${SESSIONS[session].id}. ${groupRotation(session)} ` +
     `Tuning In (3 mins) and Storytelling (4 mins, using the A3 scene card "${wk.scene.title}" for picture talk - NOT a re-read) are whole class. ` +
-    `"Art and Craft / Tuffy Play" (13 mins) runs BOTH groups at the same time: write the process lines for the Tuff Tray group AND for the Art & Craft group ` +
-    `(prefix lines "Tuff Tray:" or "Art & Craft:"), including how each teacher positions children and manages turns. ` +
+    `"Art and Craft" and "Tuffy Play" are TWO SEPARATE steps that run at the same time (13 mins each): "Art and Craft" is for the ` +
+    `${session === 2 ? "Group B" : "Group A"} with Teacher 2 at the art table, "Tuffy Play" is for ${session === 2 ? "Group A" : "Group B"} with ` +
+    `Teacher 1 at the tuff tray. Give each step its own materials, process and intentional links, including how the teacher positions ` +
+    `the 9 children and manages turns. Do not mix tray materials into the art step or art materials into the tray step. ` +
     `Art & Craft this week: "${wk.artCraft.title}" - ${wk.artCraft.description} ${tray} ` +
     (session === 3
       ? `IB03 must DEEPEN rather than repeat IB02: new tuning-in hook, a different scene-card question, harder/extended questioning at the tray, and children recalling what the other group discovered in IB02.`
@@ -146,7 +150,7 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
   const block = blockForWeek(plan, req.week);
   const spec = SESSIONS[req.session];
   const ef = wk.ef[req.session - 1];
-  const steps = spec.steps.map(([n, m]) => `${n} (${m} mins)`).join(" -> ");
+  const steps = spec.steps.map(([n, m, par]) => `${n} (${m} mins${par ? ", in parallel" : ""})`).join(" -> ");
   const levelCode = plan.level.toUpperCase();
   const cat = catalogue.map((o) => `${o.code}: ${o.en}`).join("\n");
 
@@ -205,9 +209,9 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `every EF skill listed must be intentionally planned in at least one step.\n` +
     `- differentiation: support (for a hesitant or younger child) and stretch (for a confident child).\n` +
     `- lookFors: exactly ${req.session === 1 ? 3 : 4} observable success criteria, one per objective, in the same order, phrased so a teacher can tick them.\n` +
-    (req.session === 1 ? "" : `- In the "Art and Craft / Tuffy Play" step, the "Art & Craft:" lines must show how the ACE objective (Objective 4) and its ` +
-      `learning goal are intentionally taught (modelling the technique, open-ended choices, talking about their art), and that step's ` +
-      `intentional list must include "Objective 4 (ACE - Art & Craft)".\n`) +
+    (req.session === 1 ? "" : `- The "Art and Craft" step must show how the ACE objective (Objective 4) and its learning goal are ` +
+      `intentionally taught (modelling the technique, open-ended choices, talking about their art) and its intentional list must include ` +
+      `"Objective 4 (ACE - Art & Craft)". The "Tuffy Play" step's intentional list must include "Objective 3 (Learning Domain)".\n`) +
     `- rehearseRetrieve: teacherPrompt = how teachers revisit THIS week's story language/sound words during daily routines and ` +
     `transitions (quote what the teacher says); extension = a home or outdoor link using Singapore places/experiences where ` +
     `natural. Never suggest coins, beads, buttons, batteries or other choking hazards.\n` +
@@ -225,12 +229,13 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
   const byCode = new Map(catalogue.map((o) => [o.code, o]));
 
   // Steps: enforce template names, order and minutes.
-  const steps = spec.steps.map(([name, minutes], i) => {
+  const steps = spec.steps.map(([name, minutes, parallel], i) => {
     const s = raw.steps.find((x) => clean(x?.name).toLowerCase() === name.toLowerCase()) ?? raw.steps[i];
     if (!s) throw new Error(`missing step ${name}`);
     return {
       name,
       minutes,
+      parallel: parallel ?? null,
       materials: cleanArr(s.materials),
       process: cleanArr(s.process),
       intentional: (Array.isArray(s.intentional) ? s.intentional : [])

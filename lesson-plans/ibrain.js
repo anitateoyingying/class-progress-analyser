@@ -8,8 +8,8 @@
   const SESSION_ID = { 1: "IB01", 2: "IB02", 3: "IB03" };
   const STRUCTURE = [
     { id: "IB01", name: "Lesson A: The Narrative & Connection to Story", steps: [["Tuning In", 5], ["Storytelling", 10], ["Role Play", 5], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]] },
-    { id: "IB02", name: "Lesson B: Sensory Construction - Art & Craft / Tuff Tray", steps: [["Tuning In", 3], ["Storytelling", 4], ["Art & Craft / Tuffy Play", 13], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]] },
-    { id: "IB03", name: "Lesson C: Sensory Construction - Art & Craft / Tuff Tray (groups swap)", steps: [["Tuning In", 3], ["Storytelling", 4], ["Art & Craft / Tuffy Play", 13], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]] },
+    { id: "IB02", name: "Lesson B: Sensory Construction - Art & Craft / Tuff Tray", steps: [["Tuning In", 3], ["Storytelling", 4], ["Art & Craft", 13], ["Tuffy Play (same time, other group)", 13], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]] },
+    { id: "IB03", name: "Lesson C: Sensory Construction - Art & Craft / Tuff Tray (groups swap)", steps: [["Tuning In", 3], ["Storytelling", 4], ["Art & Craft", 13], ["Tuffy Play (same time, other group)", 13], ["Cleaning Up", 3], ["Cooling Down", 2], ["Wrap Up", 5]] },
   ];
   const LINK_CLASS = {
     "Objective 1 (Communication & Language)": "chip-ll",
@@ -557,6 +557,7 @@
 
     for (const s of l.steps) {
       const c = el("div");
+      if (s.parallel) c.appendChild(el("p", "ib-parallel", `This ${s.name.toLowerCase()} group ${s.parallel}.`));
       const mat = el("p", "ib-mat");
       mat.appendChild(el("strong", null, "Materials / Resources: "));
       mat.appendChild(document.createTextNode(s.materials.length ? s.materials.join("; ") : "None needed"));
@@ -579,7 +580,7 @@
         }
         c.appendChild(il);
       }
-      row(t, `${s.name} (${s.minutes} mins)`, c);
+      row(t, `${s.name} (${s.minutes} mins${s.parallel ? ", in parallel" : ""})`, c);
     }
     row(t, "Rehearse and Retrieve", frag(el("strong", null, "Teacher Prompt: "), l.rehearseRetrieve.teacherPrompt, el("br"), el("strong", null, "Extension: "), l.rehearseRetrieve.extension));
     row(t, "Differentiation", frag(el("strong", null, "Support: "), l.differentiation.support, el("br"), el("strong", null, "Stretch: "), l.differentiation.stretch));
@@ -598,7 +599,7 @@
     return new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
   }
 
-  const P = { face: "Arial", size: 9, label: "F2F2F2", border: { type: "solid", pt: 0.75, color: "000000" } };
+  const P = { face: "Century Gothic", size: 9, label: "F2F2F2", border: { type: "solid", pt: 0.75, color: "000000" } };
   const cellL = (text) => ({ text, options: { bold: true, fill: { color: P.label }, valign: "top" } });
   const runs = (parts) => parts.flatMap((p, i) => {
     const t = typeof p === "string" ? { text: p, options: {} } : p;
@@ -622,7 +623,8 @@
     ])]);
     if (l.groupRotation) rows.push([cellL("Group Organisation"), span3([l.groupRotation, { text: l.trayStage, options: { italic: true } }])]);
     for (const s of l.steps) {
-      rows.push([cellL(`${s.name}\n(${s.minutes} mins)`), span3([
+      rows.push([cellL(`${s.name}\n(${s.minutes} mins${s.parallel ? ", in parallel" : ""})`), span3([
+        ...(s.parallel ? [{ text: `This ${s.name.toLowerCase()} group ${s.parallel}.`, options: { italic: true } }] : []),
         { text: `Materials / Resources: ${s.materials.length ? s.materials.join("; ") : "None needed"}`, options: { bold: true } },
         ...s.process.map((p) => `• ${p}`),
         ...s.intentional.map((x) => ({ text: `▸ ${x.link}: ${x.how}`, options: { italic: true, color: "1C5CAB" } })),
@@ -647,7 +649,7 @@
     return t.map((r) => r.text);
   };
   function cellH(cell, widthIn, fontSize) {
-    const cpl = Math.max(8, Math.floor((widthIn - 0.12) * 72 / (fontSize * 0.5)));
+    const cpl = Math.max(8, Math.floor((widthIn - 0.12) * 72 / (fontSize * 0.58)));
     const lines = paras(cell).reduce((n, p) => n + Math.max(1, Math.ceil(p.length / cpl)), 0);
     return lines * fontSize * 1.22 / 72 + 0.14;
   }
