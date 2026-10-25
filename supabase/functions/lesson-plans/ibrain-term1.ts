@@ -555,7 +555,7 @@ const PG: TermPlan = {
       secCode: "EY.PG.SED.5.1",
       llCode: "EY.PG.LL.1.3",
       ef: [IC, WM, CF],
-      rolePlay: "Stumble trip forest in 2 lanes (9 children and 1 teacher per lane), moving like a slow 'train' so children keep walking rather than waiting: each lane has 2 pool-noodle 'branches' to step over and a chair-and-fabric 'tree' tunnel to duck under. The child at the front stands on the 'my turn' footprint mat, the adult asks 'Your turn?' and the child answers 'My turn!' (or pats their chest), then goes through saying 'stumble trip!'. The next child waits on the mat with hands on knees and gets a thumbs-up for waiting. At the end of the lane, each child asks or gestures 'Where is Bear?' and peeks behind the 'tree' to find the hiding bear picture.",
+      rolePlay: "Stumble trip forest train (whole group, no queue): pool-noodle 'branches' and chair-and-fabric 'trees' are spread around a big circle. All 18 children walk the circle together like a train behind Teacher A, stepping over branches and ducking under fabric while chanting 'stumble trip!'; Teacher B walks at the back helping anyone who needs a hand. Each lap a different child is the 'train driver' at the front ('My turn!') while the others follow ('Your turn next!'). On the last lap Teacher B hides the bear picture behind a 'tree' and everyone points and says 'Where is Bear? There!'.",
       artCraft: { title: "Stumble Trip Forest", description: "Leaf and twig collage pressed onto sticky contact paper tree trunks to make the class forest." },
       scene: {
         title: "Uh-uh! A forest!",

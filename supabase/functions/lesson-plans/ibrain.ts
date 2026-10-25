@@ -311,6 +311,11 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
   ];
   const missing = needed.filter((n) => !linked.has(n));
   if (missing.length) throw new Error(`not facilitated in any step: ${missing.join(", ")}`);
+  // Describe each EF skill by where it is actually facilitated, so the summary can never invent a game the steps lack.
+  const efGrounded = efSkills.map((e) => {
+    const hits = steps.flatMap((st) => st.intentional.filter((x) => x.link === e.skill).map((x) => `${st.name}: ${x.how}`));
+    return { skill: e.skill, how: hits.join(" ") || e.how };
+  });
 
   const disposition = (DISPOSITIONS as readonly string[]).includes(raw.disposition?.name)
     ? { name: raw.disposition.name, description: clean(raw.disposition.description) }
@@ -331,7 +336,7 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
     duration: "30 mins",
     learningDomains: [...new Set(objectives.map((o) => DOMAIN_NAMES[domainOf(o.code)]).filter(Boolean))],
     disposition,
-    efSkills,
+    efSkills: efGrounded,
     objectives: withGoals,
     steps,
     groupRotation: groupRotation(req.session),
