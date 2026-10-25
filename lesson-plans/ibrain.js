@@ -32,7 +32,7 @@
   const tabs = [$("#tab-cd"), $("#tab-ib")];
   const SUBTITLES = {
     "tab-cd": "Choose a level, language and topic to generate ready-to-teach lesson plans.",
-    "tab-ib": "Story-driven Tuff Tray lessons for 2 and 3 year olds: 3 x 30-minute lessons a week, built on the iBrain template.",
+    "tab-ib": "Story-driven Tuff Tray lessons for 2 and 3 year olds: 3 x 30-minute lessons a week, built on the i-Brain template.",
   };
   function selectTab(tab) {
     for (const t of tabs) {
@@ -169,7 +169,7 @@
 
   $("#ib-clear").addEventListener("click", () => {
     const level = levelSel.value;
-    if (!confirm(`Remove all saved ${terms[level]?.shortLabel || ""} iBrain lessons from this browser?`)) return;
+    if (!confirm(`Remove all saved ${terms[level]?.shortLabel || ""} i-Brain lessons from this browser?`)) return;
     for (const k of Object.keys(store)) if (k.startsWith(`${level}-`)) delete store[k];
     saveStore();
     renderResults();
@@ -328,6 +328,7 @@
       ["Character values (CDP)", "cdpValues", term.cdpValues, true],
       ["Focus", "focus", term.focus],
       ["Language exposure", "languageExposure", term.languageExposure],
+      ["Topic brainstorm", "topicBrainstorm", term.topicBrainstorm || ""],
     ]) {
       facts.appendChild(el("dt", null, k));
       facts.appendChild(ed(path, v, null, "dd", list));
@@ -365,12 +366,20 @@
         const wq = el("p", "ib-wonder", "Wondering: ");
         wq.appendChild(ed(`blocks.${i}.wondering`, b.wondering));
         focus.appendChild(wq);
+        if (b.wondering2 || editing) {
+          const w2 = el("p", "ib-wonder", `Week ${b.weeks[1]} wondering: `);
+          w2.appendChild(ed(`blocks.${i}.wondering2`, b.wondering2 || b.wondering));
+          focus.appendChild(w2);
+        }
         const setup = el("div");
         setup.appendChild(ed(`blocks.${i}.setup`, b.setup, null, "p"));
         setup.appendChild(ed(`blocks.${i}.addOn`, b.addOn, "ib-addon", "p"));
         const sf = el("p", "muted", "Safety: ");
         sf.appendChild(ed(`blocks.${i}.safety`, b.safety));
         setup.appendChild(sf);
+        const so = el("p", "ib-source", "Where to buy: ");
+        so.appendChild(ed(`blocks.${i}.sourcing`, b.sourcing || ""));
+        setup.appendChild(so);
         const vision = blockArtOk(level, i) ? svgBox(IBArt.tray(b, 2), "ib-thumb", `Tuff tray vision: ${b.title}`) : artHidden();
         return [`${b.weeks[0]}-${b.weeks[1]}`, focus, setup, b.outcomes.join("\n"), vision];
       }),
@@ -451,7 +460,8 @@
       : artHidden());
     const tcap = el("figcaption");
     tcap.appendChild(el("strong", null, `Tuff tray vision: ${block.title}`));
-    tcap.appendChild(el("p", null, `Wondering: ${block.wondering}`));
+    tcap.appendChild(el("p", null, `Wondering: ${w.week === block.weeks[1] && block.wondering2 ? block.wondering2 : block.wondering}`));
+    if (block.sourcing) tcap.appendChild(el("p", "ib-source", `Where to buy: ${block.sourcing}`));
     tf.appendChild(tcap);
     res.appendChild(tf);
     sec.appendChild(res);
@@ -567,8 +577,11 @@
         if (m) { li.appendChild(chip(m[1], m[1].toLowerCase().startsWith("tuff") ? "chip-tray" : "chip-art")); li.appendChild(document.createTextNode(` ${m[2]}`)); } else li.textContent = p;
         pl.appendChild(li);
       }
-      c.appendChild(pl);
       if (s.intentional.length) {
+        const grid = el("div", "ib-step-grid");
+        grid.appendChild(pl);
+        const oc = el("div", "ib-step-obj");
+        oc.appendChild(el("strong", null, "Objectives:"));
         const il = el("ul", "ib-intent");
         for (const x of s.intentional) {
           const li = el("li");
@@ -576,15 +589,17 @@
           li.appendChild(document.createTextNode(` ${x.how}`));
           il.appendChild(li);
         }
-        c.appendChild(il);
-      }
+        oc.appendChild(il);
+        grid.appendChild(oc);
+        c.appendChild(grid);
+      } else c.appendChild(pl);
       row(t, `${s.name} (${s.minutes} mins${s.parallel ? ", in parallel" : ""})`, c);
     }
     row(t, "Rehearse and Retrieve", frag(el("strong", null, "Teacher Prompt: "), l.rehearseRetrieve.teacherPrompt, el("br"), el("strong", null, "Extension: "), l.rehearseRetrieve.extension));
     row(t, "Differentiation", frag(el("strong", null, "Support: "), l.differentiation.support, el("br"), el("strong", null, "Stretch: "), l.differentiation.stretch));
     const lf = el("ul", "ib-check");
     l.lookFors.forEach((x) => lf.appendChild(el("li", null, x)));
-    row(t, "Look-fors (observation)", lf);
+    row(t, "Look For", lf);
     const scroll = el("div", "ib-table-wrap");
     scroll.appendChild(t);
     art.appendChild(scroll);
@@ -621,16 +636,22 @@
     ])]);
     if (l.groupRotation) rows.push([cellL("Group Organisation"), span3([l.groupRotation, { text: l.trayStage, options: { italic: true } }])]);
     for (const s of l.steps) {
-      rows.push([cellL(`${s.name}\n(${s.minutes} mins${s.parallel ? ", in parallel" : ""})`), span3([
+      const body = [
         ...(s.parallel ? [{ text: `This ${s.name.toLowerCase()} group ${s.parallel}.`, options: { italic: true } }] : []),
         { text: `Materials / Resources: ${s.materials.length ? s.materials.join("; ") : "None needed"}`, options: { bold: true } },
         ...s.process.map((p) => `• ${p}`),
-        ...s.intentional.map((x) => ({ text: `▸ ${x.link}: ${x.how}`, options: { italic: true, color: "1C5CAB" } })),
-      ])]);
+      ];
+      const label = cellL(`${s.name}\n(${s.minutes} mins${s.parallel ? ", in parallel" : ""})`);
+      rows.push(s.intentional.length
+        ? [label, { text: runs(body), options: { colspan: 2, valign: "top" } }, { text: runs([
+          { text: "Objectives:", options: { bold: true } },
+          ...s.intentional.map((x) => ({ text: `▸ ${x.link}: ${x.how}`, options: { color: "1C5CAB" } })),
+        ]), options: { valign: "top" } }]
+        : [label, span3(body)]);
     }
     rows.push([cellL("Rehearse and Retrieve"), span3([`Teacher Prompt: ${l.rehearseRetrieve.teacherPrompt}`, `Extension: ${l.rehearseRetrieve.extension}`])]);
     rows.push([cellL("Differentiation"), span3([`Support: ${l.differentiation.support}`, `Stretch: ${l.differentiation.stretch}`])]);
-    rows.push([cellL("Look-fors"), span3(l.lookFors.map((x) => `☐ ${x}`))]);
+    rows.push([cellL("Look For"), span3(l.lookFors.map((x) => `☐ ${x}`))]);
     return rows;
   }
 
@@ -647,7 +668,7 @@
     return t.map((r) => r.text);
   };
   function cellH(cell, widthIn, fontSize) {
-    const cpl = Math.max(8, Math.floor((widthIn - 0.12) * 72 / (fontSize * 0.58)));
+    const cpl = Math.max(8, Math.floor((widthIn - 0.12) * 72 / (fontSize * 0.47)));
     const lines = paras(cell).reduce((n, p) => n + Math.max(1, Math.ceil(p.length / cpl)), 0);
     return lines * fontSize * 1.22 / 72 + 0.14;
   }
@@ -661,17 +682,20 @@
     }
     return h;
   }
-  // Split a [label, span3-runs] row so its first part fits in `room` inches.
+  // Split a long step row so its first part fits in `room` inches. Rows are [label, body(colspan 3)] or
+  // [label, body(colspan 2), objectives]; the objectives cell stays with the first part.
   function splitRow(row, colW, fontSize, room) {
-    const [label, body] = row;
-    if (row.length !== 2 || !Array.isArray(body.text) || body.text.length < 2) return null;
-    const w = colW.slice(1).reduce((a, b) => a + b, 0);
+    const [label, body, obj] = row;
+    if ((row.length !== 2 && row.length !== 3) || !Array.isArray(body.text) || body.text.length < 2) return null;
+    if (obj && cellH(obj, colW[3], fontSize) > room) return null;
+    const w = colW.slice(1, obj ? 3 : 4).reduce((a, b) => a + b, 0);
     let k = 1;
     while (k < body.text.length && cellH({ text: body.text.slice(0, k + 1) }, w, fontSize) <= room) k++;
     if (cellH({ text: body.text.slice(0, k) }, w, fontSize) > room) return null;
     const fix = (runs) => runs.map((r, i) => ({ text: r.text, options: { ...r.options, breakLine: i < runs.length - 1 } }));
     const contLabel = { ...label, text: `${String(label.text).split("\n")[0]}\n(cont.)` };
-    return [[label, { ...body, text: fix(body.text.slice(0, k)) }], [contLabel, { ...body, text: fix(body.text.slice(k)) }]];
+    const first = obj ? [label, { ...body, text: fix(body.text.slice(0, k)) }, obj] : [label, { ...body, text: fix(body.text.slice(0, k)) }];
+    return [first, [contLabel, { text: fix(body.text.slice(k)), options: { colspan: 3, valign: "top" } }]];
   }
   function paginate(rows, headerRows, colW, fontSize) {
     const head = rows.slice(0, headerRows), body = rows.slice(headerRows);
@@ -722,7 +746,7 @@
 
       const cover = add();
       cover.addImage({ data: logo, x: 2.25, y: 1.6, w: 3.0, h: 1.93 });
-      cover.addText(`iBrain\n\n${term.shortLabel}\nTerm ${termNo(term)}\nLesson Plans`, { x: 0.5, y: 4.0, w: 6.5, h: 3.2, align: "center", fontFace: P.face, fontSize: 32, bold: true, color: "000000" });
+      cover.addText(`i-Brain\n\n${term.shortLabel}\nTerm ${termNo(term)}\nLesson Plans`, { x: 0.5, y: 4.0, w: 6.5, h: 3.2, align: "center", fontFace: P.face, fontSize: 32, bold: true, color: "000000" });
       cover.addText(`${term.story} by ${term.author}`, { x: 0.5, y: 7.4, w: 6.5, h: 0.5, align: "center", fontFace: P.face, fontSize: 14, italic: true });
 
       const ov = add();
@@ -739,7 +763,7 @@
       ], { ...TABLE_OPTS, colW: [1.6, 5.2] });
 
       addPagedTable(add, [
-        [{ text: `iBrain Tuff Tray Plan Term ${termNo(term)} (${term.shortLabel})`, options: { colspan: 4, bold: true, fontSize: 16, border: { type: "none" } } }],
+        [{ text: `i-Brain Tuff Tray Plan Term ${termNo(term)} (${term.shortLabel})`, options: { colspan: 4, bold: true, fontSize: 16, border: { type: "none" } } }],
         [cellL("Weeks"), cellL("Focus & wondering"), cellL("Set-up and add-on"), cellL("Outcomes")],
         ...term.blocks.map((b) => [
           { text: `${b.weeks[0]}-${b.weeks[1]}` },
@@ -768,7 +792,7 @@
         const sceneOk = weekArtOk(level, wk), trayOk = blockArtOk(level, term.blocks.indexOf(block));
         if (!sceneOk && !trayOk) continue;
         const s1 = add();
-        s1.addText(`${term.shortLabel} Term ${termNo(term)} iBrain Lesson ${wk} - Resources`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
+        s1.addText(`${term.shortLabel} Term ${termNo(term)} i-Brain Lesson ${wk} - Resources`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
         if (sceneOk) {
           const sceneImg = await IBArt.toPng(IBArt.scene(w.scene));
           s1.addText("A3 scene card (print on A3 for picture talk)", { x: 0.35, y: 1.0, w: 6.8, h: 0.3, fontFace: P.face, fontSize: 11, bold: true });
@@ -788,7 +812,7 @@
           s2.addImage({ data: img.data, x: 0.45 + (i % 2) * 3.35, y: 1.1 + Math.floor(i / 2) * 2.7, w: 3.1, h: (3.1 * img.h) / img.w });
         }
       }
-      await pptx.writeFile({ fileName: `iBrain ${term.shortLabel} Term ${termNo(term)} Lesson Plans.pptx` });
+      await pptx.writeFile({ fileName: `i-Brain ${term.shortLabel} Term ${termNo(term)} Lesson Plans.pptx` });
     } catch (e) {
       globalError(`PowerPoint export failed: ${e.message}`);
     } finally {
@@ -797,6 +821,105 @@
     }
   }
   $("#ib-pptx").addEventListener("click", exportPptx);
+
+  // ===== Printable resources (PDF): tray posters, A3 scene cards, cut-out word cards =====
+  async function exportPrintables() {
+    const level = levelSel.value, term = planFor(level);
+    if (!term) return;
+    const btn = $("#ib-print");
+    btn.disabled = true;
+    btn.textContent = "Building printables…";
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const ink = () => doc.setTextColor(61, 50, 41);
+      const wrapText = (text, x, y, w, size, style = "normal") => {
+        doc.setFont("helvetica", style);
+        doc.setFontSize(size);
+        const lines = doc.splitTextToSize(String(text), w);
+        doc.text(lines, x, y);
+        return y + lines.length * size * 0.42;
+      };
+      const footer = (txt) => { doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text(txt, 10, doc.internal.pageSize.getHeight() - 6); ink(); };
+      const title = `i-Brain ${term.shortLabel} Term ${termNo(term)}: ${term.story}`;
+
+      // cover
+      ink();
+      wrapText("i-Brain Printable Resources", 20, 40, 170, 26, "bold");
+      wrapText(title, 20, 55, 170, 14);
+      let y = 75;
+      for (const line of [
+        "1. Tuff tray set-up posters (A4 landscape): one per 2-week block, with a materials checklist, add-on, safety and where to buy.",
+        "2. Scene cards (A3 landscape): one per week for picture talk. Print on A3 or scale to fit A4.",
+        "3. Word cards (A4): cut along the dashed lines; laminate for reuse.",
+      ]) y = wrapText(line, 20, y, 170, 11) + 3;
+      footer("© 2026 AGAPE Little Uni.  i-Brain Lesson Plan resources");
+
+      // tray posters
+      for (const [bi, b] of term.blocks.entries()) {
+        doc.addPage("a4", "landscape");
+        ink();
+        wrapText(`Tuff tray set-up · Weeks ${b.weeks[0]}-${b.weeks[1]}: ${b.title}`, 10, 14, 277, 16, "bold");
+        let ty = wrapText(`Wondering: ${b.wondering}${b.wondering2 ? `   |   Week ${b.weeks[1]}: ${b.wondering2}` : ""}`, 10, 22, 277, 10, "italic");
+        if (blockArtOk(level, bi)) {
+          const img = await IBArt.toPng(IBArt.tray(b, 2), 2.5, "image/jpeg");
+          doc.addImage(img.data, "JPEG", 10, ty + 2, 160, (160 * img.h) / img.w);
+        }
+        let ry = 30;
+        const rx = 176;
+        ry = wrapText("Materials checklist", rx, ry, 110, 11, "bold") + 1;
+        doc.setDrawColor(61, 50, 41);
+        for (const m of b.materials) {
+          doc.rect(rx, ry - 3, 3.2, 3.2);
+          ry = wrapText(`${m.addOn ? "[Week " + b.weeks[1] + " add-on] " : ""}${m.label}`, rx + 5, ry, 105, 9) + 1.2;
+        }
+        ry = wrapText("Set-up", rx, ry + 2, 110, 10, "bold");
+        ry = wrapText(b.setup, rx, ry + 1, 110, 8.5);
+        ry = wrapText(b.addOn, rx, ry + 1.5, 110, 8.5, "italic");
+        ry = wrapText(`Safety: ${b.safety}`, rx, ry + 1.5, 110, 8.5);
+        if (b.sourcing) wrapText(`Where to buy: ${b.sourcing}`, rx, ry + 1.5, 110, 8.5);
+        footer(`${title} · Tuff tray poster`);
+      }
+
+      // A3 scene cards
+      for (const w of term.weeks) {
+        if (!weekArtOk(level, w.week)) continue;
+        doc.addPage("a3", "landscape");
+        const img = await IBArt.toPng(IBArt.scene(w.scene), 3, "image/jpeg");
+        const pw = 400, ph = (pw * img.h) / img.w;
+        doc.addImage(img.data, "JPEG", 10, 10, pw, ph);
+        ink();
+        wrapText(`Week ${w.week} picture talk: ${w.scene.prompts.join("   ·   ")}`, 12, 10 + ph + 8, 396, 10, "italic");
+        footer(`${title} · Week ${w.week} scene card (A3)`);
+      }
+
+      // word cards, 6 per A4 page with dashed cut lines
+      for (const w of term.weeks) {
+        if (!weekArtOk(level, w.week)) continue;
+        doc.addPage("a4", "portrait");
+        ink();
+        wrapText(`Week ${w.week} word cards: ${w.title}  (cut along the dashed lines)`, 10, 12, 190, 11, "bold");
+        const cw = 90, ch = 69;
+        for (let i = 0; i < w.words.length; i++) {
+          const img = await IBArt.toPng(IBArt.wordCard(w.words[i], i), 2.5, "image/jpeg");
+          const x = 12 + (i % 2) * (cw + 6), yy = 20 + Math.floor(i / 2) * (ch + 6);
+          doc.addImage(img.data, "JPEG", x, yy, cw, ch);
+          doc.setLineDashPattern([2, 2], 0);
+          doc.setDrawColor(160);
+          doc.rect(x - 2, yy - 2, cw + 4, ch + 4);
+          doc.setLineDashPattern([], 0);
+        }
+        footer(`${title} · Week ${w.week} word cards`);
+      }
+      doc.save(`i-Brain ${term.shortLabel} Term ${termNo(term)} Printable Resources.pdf`);
+    } catch (e) {
+      globalError(`Printable resources failed: ${e.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Download printable resources (PDF)";
+    }
+  }
+  $("#ib-print").addEventListener("click", exportPrintables);
 
   // ===== boot =====
   if (sessionStorage.getItem("lp_tab") === "tab-ib") selectTab($("#tab-ib"));

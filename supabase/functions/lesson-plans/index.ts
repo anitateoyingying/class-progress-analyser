@@ -16,13 +16,15 @@ const GEMINI_KEYS = [
 ].filter(Boolean);
 const MISTRAL_API_KEY = Deno.env.get("MISTRAL_API_KEY") || "";
 // Each model has its own free daily quota, so more models = more free capacity.
-// Order: strongest free models first, lighter ones as overflow (probed 2026-10-11 on the free tier).
-const GEMINI_MODELS = [
-  "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-3-flash-preview", "gemini-3.7-flash",
-  "gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest",
+// Cheapest, highest-limit models first: Flash-Lite (fast, own 20/day each), then Gemma (no JSON mode, much larger
+// free allowance), then the full Flash models as a last resort. Probed on the free tier 2026-10-25.
+const MODEL_CHAIN: { model: string; plain?: boolean }[] = [
+  { model: "gemini-3.5-flash-lite" }, { model: "gemini-3.1-flash-lite" }, { model: "gemini-flash-lite-latest" },
+  { model: "gemini-2.5-flash-lite" },
+  { model: "gemma-4-26b-a4b-it", plain: true }, { model: "gemma-4-31b-it", plain: true },
+  { model: "gemini-3.5-flash" }, { model: "gemini-3.6-flash" }, { model: "gemini-2.5-flash" },
+  { model: "gemini-3-flash-preview" }, { model: "gemini-3.7-flash" },
 ];
-// Gemma runs on the same key with a far larger free allowance but has no JSON mode: prompt for JSON, parse the text.
-const GEMMA_MODELS = ["gemma-4-26b-a4b-it"];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -297,19 +299,13 @@ function buildAttempts<T>(
   prompt: string, gemini: GeminiOpts, mistral: { prompt: string; system: string }, parse: (v: unknown) => T | null,
 ): Attempt<T>[] {
   const attempts: Attempt<T>[] = [];
-  for (const model of GEMINI_MODELS) {
+  for (const { model, plain } of MODEL_CHAIN) {
     GEMINI_KEYS.forEach((key, k) => {
       attempts.push({
         label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
-        run: (signal) => callGemini(key, model, prompt, gemini, parse, signal),
-      });
-    });
-  }
-  for (const model of GEMMA_MODELS) {
-    GEMINI_KEYS.forEach((key, k) => {
-      attempts.push({
-        label: `${model}${GEMINI_KEYS.length > 1 ? ` (key ${k + 1})` : ""}`,
-        run: (signal) => callGemini(key, model, `${mistral.system}\n\n${mistral.prompt}`, { ...gemini, plain: true }, parse, signal),
+        run: (signal) => plain
+          ? callGemini(key, model, `${mistral.system}\n\n${mistral.prompt}`, { ...gemini, plain: true }, parse, signal)
+          : callGemini(key, model, prompt, gemini, parse, signal),
       });
     });
   }
@@ -355,7 +351,8 @@ function handleIbrain(r: Record<string, unknown>, skip: number): Promise<Respons
   const week = Number(r.week), session = Number(r.session);
   if (!Number.isInteger(week) || week < 1 || week > base.weeks.length) return json({ error: "Malformed week" }, 400);
   if (!Number.isInteger(session) || session < 1 || session > 3) return json({ error: "Malformed session" }, 400);
-  const request: IbrainRequest = { levelKey, week, session };
+  const feedback = typeof r.feedback === "string" && r.feedback.trim() ? r.feedback.trim().slice(0, 1500) : undefined;
+  const request: IbrainRequest = { levelKey, week, session, feedback };
 
   const catalogue = LEARNING_OUTCOMES[levelKey];
   const plan = mergeEditedPlan(base, r.plan, catalogue);

@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="lesson-plans.css">
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 <script src="app.js" defer></script>
 <script src="ibrain-art.js" defer></script>
 <script src="ibrain.js" defer></script>
@@ -53,7 +54,7 @@
 
   <div class="mode-tabs rise-2" role="tablist" aria-label="Lesson plan type">
     <button class="mode-tab active" role="tab" id="tab-cd" aria-controls="panel-cd" aria-selected="true">Character Development Lesson Plans</button>
-    <button class="mode-tab" role="tab" id="tab-ib" aria-controls="panel-ib" aria-selected="false" tabindex="-1">iBrain Lesson Plans</button>
+    <button class="mode-tab" role="tab" id="tab-ib" aria-controls="panel-ib" aria-selected="false" tabindex="-1">i-Brain Lesson Plans</button>
   </div>
 
   <div id="panel-cd" role="tabpanel" aria-labelledby="tab-cd">
@@ -103,6 +104,7 @@
       <div class="ib-actions">
         <button id="ib-generate">Generate Term (8 weeks)</button>
         <button id="ib-pptx" class="ghost-btn" disabled>Download PowerPoint (.pptx)</button>
+        <button id="ib-print" class="ghost-btn">Download printable resources (PDF)</button>
         <button id="ib-clear" class="ghost-btn" disabled>Clear saved lessons</button>
       </div>
       <p class="muted" id="ib-hint">Generates the whole term: 8 weeks x 3 lessons (IB01, IB02, IB03), about 5 minutes in total. Lessons appear as they finish, are saved in this browser until you clear them, and any that are already saved are kept.</p>

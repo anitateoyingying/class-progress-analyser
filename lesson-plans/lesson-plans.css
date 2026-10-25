@@ -192,3 +192,8 @@
 .chip-ace { background: #fde4f1; color: #8a1a5c; border-color: #f0a8cf; }
 .ib-goal { display: block; font-size: 0.8rem; color: var(--text-secondary); font-style: italic; margin-top: 0.15rem; }
 .ib-parallel { font-size: 0.82rem; font-style: italic; color: var(--text-secondary); margin-bottom: 0.3rem; }
+.ib-step-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 0.8rem; }
+.ib-step-obj { border-left: 1.5px dashed var(--baseline); padding-left: 0.7rem; font-size: 0.84rem; }
+.ib-step-obj .ib-intent { border-top: 0; margin-top: 0.25rem; padding-top: 0; }
+.ib-source { font-size: 0.82rem; color: var(--text-secondary); }
+@media (max-width: 760px) { .ib-step-grid { grid-template-columns: 1fr; } .ib-step-obj { border-left: 0; padding-left: 0; border-top: 1.5px dashed var(--baseline); padding-top: 0.4rem; } }

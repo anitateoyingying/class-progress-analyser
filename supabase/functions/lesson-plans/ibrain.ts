@@ -50,7 +50,7 @@ const ACE_GOALS: Record<string, string> = {
 // SMART "measurable" check: an explicit count/criterion must appear in every AI-written objective.
 export const MEASURABLE = /\b(\d+|one|two|three|four|five|at least|every|all)\b/i;
 
-export interface IbrainRequest { levelKey: "pg" | "pn"; week: number; session: number }
+export interface IbrainRequest { levelKey: "pg" | "pn"; week: number; session: number; feedback?: string }
 
 interface RawStep { name: string; materials: string[]; process: string[]; intentional: { link: string; how: string }[] }
 export interface RawIbrainLesson {
@@ -119,15 +119,18 @@ const groupRotation = (session: number): string | null =>
     ? "18 children, 2 teachers, two concurrent groups of 9: Group A at the Tuff Tray with Teacher 1, Group B at Art & Craft with Teacher 2."
     : "18 children, 2 teachers, two concurrent groups of 9, SWAPPED from IB02: Group B at the Tuff Tray with Teacher 1, Group A at Art & Craft with Teacher 2, so every child experiences both this week.";
 
+export const trayWonderingFor = (block: TuffBlock, week: number): string =>
+  week === block.weeks[1] && block.wondering2 ? block.wondering2 : block.wondering;
+
 function sessionGuidance(plan: TermPlan, wk: WeekPlan, block: TuffBlock, session: number): string {
   const isAddOnWeek = wk.week === block.weeks[1];
   const tray =
-    `Tuff tray block "${block.title}" (Weeks ${block.weeks[0]}-${block.weeks[1]}). Tray wondering: "${block.wondering}". ` +
+    `Tuff tray block "${block.title}" (Weeks ${block.weeks[0]}-${block.weeks[1]}). Tray wondering this week: "${trayWonderingFor(block, wk.week)}". ` +
     `Focus: ${block.focus} Set-up (used for both weeks): ${block.setup} ` +
     (isAddOnWeek
       ? `THIS IS WEEK 2 OF THE BLOCK: keep the same set-up and introduce the add-on. ${block.addOn} `
       : `This is week 1 of the block: base set-up only (the add-on comes next week: ${block.addOn}) `) +
-    `Safety: ${block.safety} Block outcome codes: ${block.outcomes.join(", ")}.`;
+    `Safety: ${block.safety} Where to get materials: ${block.sourcing} Block outcome codes: ${block.outcomes.join(", ")}.`;
   if (session === 1) {
     return `This is IB01 (Lesson A: The Narrative & Connection to Story). No art or tuff tray today. ` +
       `Storytelling (10 mins) delivers this week's story bite through bite-sized creative strategies, and Role Play (5 mins) is: ${wk.rolePlay} ` +
@@ -137,7 +140,8 @@ function sessionGuidance(plan: TermPlan, wk: WeekPlan, block: TuffBlock, session
     `Tuning In (3 mins) and Storytelling (4 mins, using the A3 scene card "${wk.scene.title}" for picture talk - NOT a re-read) are whole class. ` +
     `"Art and Craft" and "Tuffy Play" are TWO SEPARATE steps that run at the same time (13 mins each): "Art and Craft" is for the ` +
     `${session === 2 ? "Group B" : "Group A"} with Teacher 2 at the art table, "Tuffy Play" is for ${session === 2 ? "Group A" : "Group B"} with ` +
-    `Teacher 1 at the tuff tray. Give each step its own materials, process and intentional links, including how the teacher positions ` +
+    `Teacher 1 at the tuff tray. The groups stay at their station for the whole 13 minutes - do NOT rotate or swap groups within ` +
+    `this lesson (the swap happens between IB02 and IB03). Give each step its own materials, process and intentional links, including how the teacher positions ` +
     `the 9 children and manages turns. Do not mix tray materials into the art step or art materials into the tray step. ` +
     `Art & Craft this week: "${wk.artCraft.title}" - ${wk.artCraft.description} ${tray} ` +
     (session === 3
@@ -155,7 +159,7 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
   const cat = catalogue.map((o) => `${o.code}: ${o.en}`).join("\n");
 
   return (
-    `You are an expert early childhood programme specialist in Singapore writing the AGAPE Little Uni iBrain curriculum ` +
+    `You are an expert early childhood programme specialist in Singapore writing the AGAPE Little Uni i-Brain curriculum ` +
     `(story-driven approach + Tuff Tray exploration, building inquiring minds towards Inquiry-Based Learning). Communication and ` +
     `Language is the primary driver; the whole 8-week term is anchored on ONE story so children move from listeners to active ` +
     `vocabulary users, system conceptualisers and collaborative problem-solvers. Lessons are short (30 mins), use spaced ` +
@@ -168,21 +172,25 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `CLASS: ${plan.levelLabel}, a Singapore classroom of 18 children with 2 teachers. Developmental profile:\n- ` +
     `${plan.developmental.join("\n- ")}\n\n` +
     `TERM ${plan.term}: Wondering "${plan.wondering}". Story: "${plan.story}" by ${plan.author}. ${plan.connection} ` +
-    `Character values (CDP): ${plan.cdpValues.join(", ")}. Language exposure: ${plan.languageExposure}\n\n` +
+    `Character values (CDP): ${plan.cdpValues.join(", ")}. Language exposure: ${plan.languageExposure} ` +
+    `Topic brainstorm: ${plan.topicBrainstorm}\n\n` +
     `WEEK ${wk.week} of 8 - "${wk.title}". Story bite this week (ONLY this part of the story): ${wk.storyBite} ` +
     `Key language: ${wk.keyLanguage.join(", ")}. Song/chant idea: ${wk.song} SEC value focus: ${wk.secValue} (suggested ${wk.secCode}). ` +
     `Suggested C&L code: ${wk.llCode}. Primary executive functioning skill for this lesson: ${ef}.\n\n` +
     `LESSON: ${spec.id}, ${spec.typeName}. Template steps in this exact order: ${steps}, followed by Rehearse and Retrieve.\n` +
     `${sessionGuidance(plan, wk, block, req.session)}\n\n` +
     `TUFF TRAY RULE: tray set-ups must be mess-free - no sand, water, mud, paint, slime, shaving foam, cornflour, rice or real ice ` +
-    `at the tray; use fabrics, felt, loose parts, sealed sensory bags and playdough. (Paint and glue belong only at the Art & Craft table.)\n\n` +
+    `at the tray; use fabrics, felt, loose parts, sealed sensory bags and playdough. (Paint and glue belong only at the Art & Craft table.) ` +
+    `Every tray and art material must be cheap and easy to find in Singapore (Daiso, Popular, NTUC FairPrice, Spotlight, IKEA, Watsons, ` +
+    `or recycled/school-garden items) and the tray must be quick for one teacher to set up (about 10 minutes).\n\n` +
     `STORYTELLING RULES: never read the whole book again and again. Deliver only this week's bite in bite-size, meaningful ` +
     `engagement: picture talk on the A3 scene card, puppets, props, songs, sound words, movement, and scene discussion questions.\n\n` +
     `OBJECTIVES - exactly ${req.session === 1 ? 3 : 4}, in this order:\n` +
     `1. Communication & Language objective using an EY.${levelCode}.LL code.\n` +
     `2. SEC objective using an EY.${levelCode}.SED code that matches this week's value.\n` +
     (req.session === 1
-      ? `3. One learning-domain objective using an EY.${levelCode}.ACE, NE, NUM or PD code that matches the main activity.\n`
+      ? `3. One learning-domain objective for the ROLE PLAY using an EY.${levelCode}.ACE, NE, NUM or PD code that matches it ` +
+        `(e.g. EY.${levelCode}.ACE.3.3 imaginative play, or a PD code for movement-led role play).\n`
       : `3. One learning-domain objective for the TUFF TRAY using an EY.${levelCode}.NE, NUM, PD or ACE code that matches the tray focus.\n` +
         `4. One Aesthetics and Creative Expression objective for the ART & CRAFT activity using a DIFFERENT EY.${levelCode}.ACE code ` +
         `(learning goals: ACE.1 enjoy art, music and movement; ACE.2 express ideas and feelings through art; ACE.3 create through ` +
@@ -205,8 +213,20 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `- steps: one entry per template step, in order, using the exact step names. For each: materials (specific, realistic, ` +
     `safe for the age; empty list allowed for Cooling Down), process (4-8 lines for main steps, 2-4 for short steps) written as ` +
     `teacher actions plus quoted facilitation questions/dialogue, and intentional: 1-3 entries naming WHICH objective, the ` +
-    `disposition or which EF skill this step deliberately builds and HOW. Across the lesson, every objective, the disposition and ` +
-    `every EF skill listed must be intentionally planned in at least one step.\n` +
+    `disposition or which EF skill this step deliberately builds and HOW. Across the lesson, EVERY objective, the disposition and ` +
+    `EVERY EF skill listed must be linked in at least one step (lessons missing a link are rejected). Link an objective only in ` +
+    `the step(s) its own text names (e.g. an objective "during Role Play" is linked in Role Play, not in Cleaning Up), and only ` +
+    `link the disposition where the process genuinely shows THAT disposition. Cleaning Up and Cooling Down usually link an EF ` +
+    `skill (e.g. Inhibitory Control following the tidy-up song cue) rather than an objective.\n` +
+    `- CODE ACCURACY: the official wording of each code must genuinely describe the activity. Examples: ACE.3.1 is about MARK ` +
+    `MAKING (drawing, scribbling, painting strokes), so collage, gluing or pressing pieces uses ACE.2.1 (manipulating materials ` +
+    `and media) instead; ACE.3.2 is making sounds; ACE.3.3 is imaginative/pretend play; NE.2.1 at Pre-Nursery is classifying ` +
+    `by one attribute, not general exploring.\n` +
+    `- CLASS MANAGEMENT for 18 children: never have children take individual turns one by one in front of the whole group. Use ` +
+    `whole-group simultaneous responses (everyone points, says, moves together), pairs, or small clusters of 3-6 led by each ` +
+    `teacher, so no child waits more than about ${plan.level === "pg" ? "30 seconds" : "1 minute"}. There are only 2 teachers: ` +
+    `never plan more than 2 adult-led groups at once. In Wrap Up, a few children share while the rest respond together ` +
+    `(thumbs up, echo, actions) - never all 18 one by one.\n` +
     `- differentiation: support (for a hesitant or younger child) and stretch (for a confident child).\n` +
     `- lookFors: exactly ${req.session === 1 ? 3 : 4} observable success criteria, one per objective, in the same order, phrased so a teacher can tick them.\n` +
     (req.session === 1 ? "" : `- The "Art and Craft" step must show how the ACE objective (Objective 4) and its learning goal are ` +
@@ -215,7 +235,8 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `- rehearseRetrieve: teacherPrompt = how teachers revisit THIS week's story language/sound words during daily routines and ` +
     `transitions (quote what the teacher says); extension = a home or outdoor link using Singapore places/experiences where ` +
     `natural. Never suggest coins, beads, buttons, batteries or other choking hazards.\n` +
-    `Write in clear British English, specific to this lesson, never generic filler.`
+    `Write in clear British English, specific to this lesson, never generic filler.` +
+    (req.feedback ? `\n\nREVIEWER FEEDBACK on a previous draft of this lesson - fix every point while keeping all rules above:\n${req.feedback}` : "")
   );
 }
 
@@ -256,7 +277,10 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
   const objectives = [
     pick((d) => d === "LL", wk.llCode, "Communication & Language"),
     pick((d) => d === "SED", wk.secCode, "Social-Emotional Competencies (SEC)"),
-    pick((d) => d !== "LL" && d !== "SED", block.domainCode, req.session === 1 ? "Learning Domain" : "Learning Domain (Tuff Tray)"),
+    // IB01 has no tuff tray, so its domain objective belongs to the role play (default: imaginative play, ACE.3.3).
+    pick((d) => d !== "LL" && d !== "SED",
+      req.session === 1 ? `EY.${plan.level.toUpperCase()}.ACE.3.3` : block.domainCode,
+      req.session === 1 ? "Learning Domain (Role Play)" : "Learning Domain (Tuff Tray)"),
   ];
   if (req.session > 1) {
     // Art & Craft ACE objective: the AI's 4th objective if it is ACE, else any other ACE objective it wrote.
@@ -278,13 +302,23 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
     .filter((e) => (EF_SKILLS as readonly string[]).includes(e?.skill) && !efSeen.has(e.skill) && efSeen.add(e.skill))
     .map((e) => ({ skill: e.skill, how: clean(e.how) }));
 
+  // Template requirement: every objective, the disposition and every EF skill must be facilitated in some step.
+  const linked = new Set(steps.flatMap((st) => st.intentional.map((x) => x.link)));
+  const needed = [
+    ...LINKS.filter((l) => l.startsWith("Objective")).slice(0, objectives.length),
+    "Disposition",
+    ...efSkills.map((e) => e.skill),
+  ];
+  const missing = needed.filter((n) => !linked.has(n));
+  if (missing.length) throw new Error(`not facilitated in any step: ${missing.join(", ")}`);
+
   const disposition = (DISPOSITIONS as readonly string[]).includes(raw.disposition?.name)
     ? { name: raw.disposition.name, description: clean(raw.disposition.description) }
     : { name: "Engagement", description: clean(raw.disposition?.description) };
 
   return {
     id: spec.id,
-    title: `${plan.shortLabel} Term ${plan.term} iBrain Lesson ${req.week} - ${spec.id}`,
+    title: `${plan.shortLabel} Term ${plan.term} i-Brain Lesson ${req.week} - ${spec.id}`,
     level: plan.level,
     week: req.week,
     session: req.session,
@@ -292,7 +326,7 @@ export function finalizeIbrainLesson(raw: RawIbrainLesson, plan: TermPlan, req: 
     lessonTypeName: spec.typeName,
     lessonTitle: clean(raw.lessonTitle) || wk.title,
     wondering: plan.wondering,
-    trayWondering: req.session === 1 ? null : block.wondering,
+    trayWondering: req.session === 1 ? null : trayWonderingFor(block, req.week),
     story: plan.story,
     duration: "30 mins",
     learningDomains: [...new Set(objectives.map((o) => DOMAIN_NAMES[domainOf(o.code)]).filter(Boolean))],
@@ -344,6 +378,7 @@ export function mergeEditedPlan(base: TermPlan, edited: unknown, catalogue: Lear
     connection: str(e.connection, base.connection),
     focus: str(e.focus, base.focus),
     languageExposure: str(e.languageExposure, base.languageExposure),
+    topicBrainstorm: str(e.topicBrainstorm, base.topicBrainstorm, 900),
     cdpValues: list(e.cdpValues, base.cdpValues),
     blocks: base.blocks.map((b, i) => {
       const x = (eb[i] && typeof eb[i] === "object" ? eb[i] : {}) as Record<string, unknown>;
@@ -351,6 +386,7 @@ export function mergeEditedPlan(base: TermPlan, edited: unknown, catalogue: Lear
         ...b,
         title: str(x.title, b.title, 120), wondering: str(x.wondering, b.wondering, 200), focus: str(x.focus, b.focus),
         setup: str(x.setup, b.setup, 1200), addOn: str(x.addOn, b.addOn, 900), safety: str(x.safety, b.safety),
+        sourcing: str(x.sourcing, b.sourcing), wondering2: typeof x.wondering2 === "string" && x.wondering2.trim() ? x.wondering2.trim().slice(0, 200) : b.wondering2,
       };
     }),
     weeks: base.weeks.map((w, i) => {

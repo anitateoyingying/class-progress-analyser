@@ -94,6 +94,58 @@ const IBArt = (() => {
       case "dough":
         return `<path d="M${-0.7 * u} ${0.1 * u} Q${-0.75 * u} ${-0.5 * u} ${-0.1 * u} ${-0.5 * u} Q${0.7 * u} ${-0.55 * u} ${0.7 * u} 0 Q${0.65 * u} ${0.5 * u} 0 ${0.45 * u} Q${-0.65 * u} ${0.5 * u} ${-0.7 * u} ${0.1 * u}Z" fill="#8D5B3E" stroke="#5D3A26" stroke-width="${0.05 * u}"/>` +
           `<ellipse cx="${-0.15 * u}" cy="0" rx="${0.14 * u}" ry="${0.08 * u}" fill="#5D3A26"/><ellipse cx="${0.22 * u}" cy="${0.12 * u}" rx="${0.14 * u}" ry="${0.08 * u}" fill="#5D3A26"/>`;
+      case "bearbuild":
+        return `<rect x="${-1.0 * u}" y="${-0.85 * u}" width="${2 * u}" height="${1.7 * u}" rx="${0.1 * u}" fill="#C8A26B" stroke="#8D6E63" stroke-width="${0.06 * u}"/>` +
+          [-0.42, 0.42].map((x) => `<circle cx="${x * u}" cy="${-0.42 * u}" r="${0.24 * u}" fill="#E6C89A" stroke="#8D6E63" stroke-width="${0.06 * u}"/>`).join("") +
+          `<circle cy="${0.05 * u}" r="${0.6 * u}" fill="#D7A86E" stroke="#A47D4F" stroke-width="${0.05 * u}"/>` +
+          [-0.22, 0.22].map((x) => `<circle cx="${x * u}" cy="${-0.08 * u}" r="${0.11 * u}" fill="none" stroke="#5D4037" stroke-width="${0.06 * u}"/>`).join("") +
+          `<ellipse cy="${0.18 * u}" rx="${0.14 * u}" ry="${0.1 * u}" fill="#424242"/><path d="M${-0.2 * u} ${0.36 * u} q${0.2 * u} ${0.14 * u} ${0.4 * u} 0" stroke="#5D4037" stroke-width="${0.05 * u}" fill="none" stroke-linecap="round"/>`;
+      case "bowl":
+        return `<ellipse cy="${0.05 * u}" rx="${0.55 * u}" ry="${0.38 * u}" fill="${c}" stroke="#3D3229" stroke-width="${0.05 * u}"/><ellipse cy="${-0.08 * u}" rx="${0.42 * u}" ry="${0.2 * u}" fill="#fff" opacity=".35"/>`;
+      case "jar":
+        return `<rect x="${-0.3 * u}" y="${-0.38 * u}" width="${0.6 * u}" height="${0.8 * u}" rx="${0.1 * u}" fill="#E3F2FD" fill-opacity=".85" stroke="#3D3229" stroke-width="${0.04 * u}"/><rect x="${-0.33 * u}" y="${-0.52 * u}" width="${0.66 * u}" height="${0.16 * u}" rx="${0.04 * u}" fill="#E53935"/>` +
+          `<rect x="${-0.22 * u}" y="${-0.2 * u}" width="${0.44 * u}" height="${0.16 * u}" fill="#fff"/>` +
+          [[-0.12, 0.25, "#FDD835"], [0.1, 0.27, "#1E88E5"], [0, 0.12, "#FDD835"]].map(([x, y, col]) => `<circle cx="${x * u}" cy="${y * u}" r="${0.1 * u}" fill="${col}"/>`).join("");
+      case "fur":
+        return `<rect x="${-0.45 * u}" y="${-0.35 * u}" width="${0.9 * u}" height="${0.7 * u}" rx="${0.12 * u}" fill="#A1887F"/>` +
+          Array.from({ length: 14 }, (_, i) => `<path d="M${((i % 5) - 2) * 0.18 * u} ${(Math.floor(i / 5) - 1) * 0.22 * u} q${0.04 * u} ${-0.1 * u} ${0.08 * u} 0" stroke="#6D4C41" stroke-width="${0.035 * u}" fill="none"/>`).join("");
+      case "corkboard":
+        return `<rect x="${-0.75 * u}" y="${-0.55 * u}" width="${1.5 * u}" height="${1.1 * u}" rx="${0.08 * u}" fill="#C8A26B" stroke="#8D6E63" stroke-width="${0.06 * u}"/>` +
+          Array.from({ length: 9 }, (_, i) => `<circle cx="${((i % 3) - 1) * 0.45 * u}" cy="${(Math.floor(i / 3) - 1) * 0.32 * u}" r="${0.04 * u}" fill="#A47D4F"/>`).join("");
+      case "plate":
+        return `<circle r="${0.6 * u}" fill="#FFFFFF" stroke="#BDBDBD" stroke-width="${0.05 * u}"/><circle r="${0.42 * u}" fill="none" stroke="#E0E0E0" stroke-width="${0.04 * u}"/>`;
+      case "ring":
+        return `<circle r="${0.36 * u}" fill="none" stroke="#C8A26B" stroke-width="${0.16 * u}"/>`;
+      case "woodslice":
+        return `<circle r="${0.42 * u}" fill="#E6C89A" stroke="#8D6E63" stroke-width="${0.08 * u}"/>` +
+          [0.28, 0.16, 0.06].map((r) => `<circle r="${r * u}" fill="none" stroke="#C49A6C" stroke-width="${0.03 * u}"/>`).join("");
+      case "coaster":
+        return `<circle r="${0.4 * u}" fill="#D7A86E" stroke="#A47D4F" stroke-width="${0.04 * u}"/>` +
+          Array.from({ length: 8 }, (_, i) => `<circle cx="${(Math.cos(i) * 0.22 * u).toFixed(1)}" cy="${(Math.sin(i * 1.7) * 0.22 * u).toFixed(1)}" r="${0.03 * u}" fill="#A47D4F"/>`).join("");
+      case "piccard":
+        return `<rect x="${-0.48 * u}" y="${-0.42 * u}" width="${0.96 * u}" height="${0.84 * u}" rx="${0.08 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><text font-size="${0.55 * u}" text-anchor="middle" dominant-baseline="central">${esc(it.t || "")}</text>`;
+      case "block":
+        return `<rect x="${-0.35 * u}" y="${-0.35 * u}" width="${0.7 * u}" height="${0.7 * u}" rx="${0.06 * u}" fill="#FFB74D" stroke="#E65100" stroke-width="${0.04 * u}"/><rect x="${0.05 * u}" y="${-0.65 * u}" width="${0.5 * u}" height="${0.5 * u}" rx="${0.05 * u}" fill="#64B5F6" stroke="#1565C0" stroke-width="${0.04 * u}"/>`;
+      case "feltpiece":
+        return `<rect x="${-0.5 * u}" y="${-0.35 * u}" width="${u}" height="${0.7 * u}" rx="${0.1 * u}" fill="#E2707C"/><rect x="${-0.4 * u}" y="${-0.25 * u}" width="${0.8 * u}" height="${0.5 * u}" rx="${0.08 * u}" fill="none" stroke="#fff" stroke-width="${0.035 * u}" stroke-dasharray="${0.08 * u} ${0.06 * u}"/>`;
+      case "cellophane":
+        return `<path d="M${-0.8 * u} ${-0.3 * u} L${-0.2 * u} ${-0.45 * u} L${0.5 * u} ${-0.32 * u} L${0.85 * u} ${0.2 * u} L${0.2 * u} ${0.42 * u} L${-0.6 * u} ${0.3 * u}Z" fill="#81D4FA" fill-opacity=".75" stroke="#29B6F6" stroke-width="${0.04 * u}"/>` +
+          `<path d="M${-0.5 * u} ${-0.1 * u} L${-0.1 * u} ${0.15 * u} L${0.3 * u} ${-0.15 * u} M${0.1 * u} ${0.3 * u} L${0.5 * u} ${0.05 * u}" stroke="#fff" stroke-width="${0.05 * u}" fill="none"/>`;
+      case "tube":
+        return `<rect x="${-0.18 * u}" y="${-0.6 * u}" width="${0.36 * u}" height="${1.2 * u}" rx="${0.06 * u}" fill="#D7B98E" stroke="#A47D4F" stroke-width="${0.04 * u}"/><ellipse cy="${-0.6 * u}" rx="${0.18 * u}" ry="${0.07 * u}" fill="#8D6E63"/>`;
+      case "flap":
+        return `<path d="M${-0.55 * u} ${0.3 * u} Q0 ${-0.6 * u} ${0.55 * u} ${0.3 * u}Z" fill="#7CB342" stroke="#33691E" stroke-width="${0.05 * u}"/><text y="${0.12 * u}" font-size="${0.35 * u}" text-anchor="middle" dominant-baseline="central">🐞</text>`;
+      case "tunnel":
+        return `<path d="M${-0.9 * u} ${0.4 * u} Q${-0.9 * u} ${-0.75 * u} 0 ${-0.75 * u} Q${0.9 * u} ${-0.75 * u} ${0.9 * u} ${0.4 * u}" fill="none" stroke="#FF7043" stroke-width="${0.3 * u}" stroke-linecap="round"/>`;
+      case "bamboo":
+        return `<rect x="${-0.8 * u}" y="${-0.09 * u}" width="${1.6 * u}" height="${0.18 * u}" rx="${0.08 * u}" fill="#C0CA33" stroke="#827717" stroke-width="${0.03 * u}" transform="rotate(-25)"/>` +
+          [-0.35, 0.2].map((x) => `<line x1="${x * u}" y1="${-0.12 * u}" x2="${x * u}" y2="${0.12 * u}" stroke="#827717" stroke-width="${0.04 * u}" transform="rotate(-25)"/>`).join("");
+      case "spoon":
+        return `<ellipse cx="${-0.4 * u}" rx="${0.22 * u}" ry="${0.16 * u}" fill="#CFD8DC" stroke="#78909C" stroke-width="${0.04 * u}"/><rect x="${-0.2 * u}" y="${-0.05 * u}" width="${0.9 * u}" height="${0.1 * u}" rx="${0.05 * u}" fill="#B0BEC5" stroke="#78909C" stroke-width="${0.03 * u}"/>`;
+      case "shaker":
+        return `<rect x="${-0.22 * u}" y="${-0.4 * u}" width="${0.44 * u}" height="${0.85 * u}" rx="${0.12 * u}" fill="#E3F2FD" fill-opacity=".85" stroke="#3D3229" stroke-width="${0.04 * u}"/><rect x="${-0.16 * u}" y="${-0.56 * u}" width="${0.32 * u}" height="${0.18 * u}" fill="#FDD835" stroke="#3D3229" stroke-width="${0.03 * u}"/>` +
+          [[-0.08, 0.2], [0.07, 0.28], [0, 0.12], [-0.06, 0.33], [0.09, 0.16]].map(([x, y]) => `<ellipse cx="${x * u}" cy="${y * u}" rx="${0.06 * u}" ry="${0.04 * u}" fill="#8D5B3E"/>`).join("") +
+          `<path d="M${-0.42 * u} ${-0.25 * u} q${-0.12 * u} ${0.15 * u} 0 ${0.3 * u} M${0.42 * u} ${-0.25 * u} q${0.12 * u} ${0.15 * u} 0 ${0.3 * u}" stroke="#3D3229" stroke-width="${0.04 * u}" fill="none"/>`;
       case "coral":
         return `<g stroke="${c}" stroke-width="${0.28 * u}" stroke-linecap="round" fill="none"><path d="M0 ${0.8 * u} L0 ${-0.2 * u} M0 ${0.2 * u} L${-0.5 * u} ${-0.5 * u} M0 ${0.1 * u} L${0.55 * u} ${-0.45 * u} M${-0.5 * u} ${-0.5 * u} L${-0.5 * u} ${-0.9 * u} M${0.55 * u} ${-0.45 * u} L${0.7 * u} ${-0.85 * u}"/></g>`;
       case "rock":
@@ -194,8 +246,10 @@ const IBArt = (() => {
         return `<rect x="${-0.8 * u}" y="${-0.2 * u}" width="${1.6 * u}" height="${0.6 * u}" rx="${0.08 * u}" fill="#8D6E63"/><rect x="${-0.75 * u}" y="${-0.4 * u}" width="${0.35 * u}" height="${0.25 * u}" rx="${0.08 * u}" fill="#fff"/><path d="M${-0.35 * u} ${-0.3 * u} L${0.8 * u} ${-0.3 * u} L${0.8 * u} ${0.2 * u} L${-0.35 * u} ${0.2 * u}Z" fill="#E2707C"/>` +
           [0, 0.35].map((x) => `<line x1="${x * u}" y1="${-0.3 * u}" x2="${x * u}" y2="${0.2 * u}" stroke="#fff" stroke-width="${0.05 * u}"/>`).join("") +
           [-0.2, 0.05, 0.3].map((x) => `<circle cx="${x * u}" cy="${-0.38 * u}" r="${0.1 * u}" fill="#FFCC80"/>`).join("");
-      case "speech":
-        return `<rect x="${-1.6 * u}" y="${-0.4 * u}" width="${3.2 * u}" height="${0.8 * u}" rx="${0.35 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><path d="M${-0.2 * u} ${0.38 * u} L0 ${0.8 * u} L${0.25 * u} ${0.38 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><text y="${0.02 * u}" font-family="${FONT}" font-size="${0.36 * u}" text-anchor="middle" dominant-baseline="central" fill="#3D3229">${esc(it.t || "")}</text>`;
+      case "speech": {
+        const hw = Math.max(1.6, (it.t || "").length * 0.1 + 0.4);
+        return `<rect x="${-hw * u}" y="${-0.4 * u}" width="${2 * hw * u}" height="${0.8 * u}" rx="${0.35 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><path d="M${-0.2 * u} ${0.38 * u} L0 ${0.8 * u} L${0.25 * u} ${0.38 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><text y="${0.02 * u}" font-family="${FONT}" font-size="${0.36 * u}" text-anchor="middle" dominant-baseline="central" fill="#3D3229">${esc(it.t || "")}</text>`;
+      }
       case "bubbles":
         return [[0, 0, 0.18], [0.3, -0.4, 0.12], [-0.15, -0.7, 0.09], [0.15, -1, 0.07]].map(([x, y, r]) => `<circle cx="${x * u}" cy="${y * u}" r="${r * u}" fill="none" stroke="#fff" stroke-width="${0.04 * u}" opacity=".8"/>`).join("");
       case "sun":
@@ -233,6 +287,29 @@ const IBArt = (() => {
         Array.from({ length: 10 }, () => `<path d="M${(cx + (r() - 0.5) * 1.5 * R).toFixed(1)} ${(cy + (r() - 0.5) * 1.5 * R).toFixed(1)} q8 -6 16 0" stroke="#BCAAA4" stroke-width="3" fill="none" stroke-linecap="round"/>`).join("");
       case "feltbrown": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#C49A6C"/>` +
         [0.35, 0.6, 0.85].map((k) => `<circle cx="${cx}" cy="${cy}" r="${(k * R).toFixed(1)}" fill="none" stroke="#B0885C" stroke-width="2" stroke-dasharray="10 8"/>`).join("");
+      case "woodboard": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#E8D3AE"/>` +
+        Array.from({ length: 9 }, (_, i) => `<path d="M${cx - R} ${cy - R + (i + 0.5) * (2 * R) / 9} q${R / 2} ${(i % 2 ? 8 : -8)} ${R} 0 t${R} 0" fill="none" stroke="#D7BC8F" stroke-width="3"/>`).join("");
+      case "grassmud": return `<rect x="${cx - R}" y="${cy - R}" width="${R}" height="${2 * R}" fill="#6BBF59"/><rect x="${cx}" y="${cy - R}" width="${R}" height="${2 * R}" fill="#8D5B3E"/>` +
+        Array.from({ length: 110 }, () => {
+          const x = cx - r() * R, y = cy + (r() - 0.5) * 2 * R, t = r() * Math.PI;
+          return `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + 18 * Math.cos(t)).toFixed(1)}" y2="${(y + 18 * Math.sin(t)).toFixed(1)}" stroke="${r() > 0.5 ? "#3E8E4F" : "#8BC34A"}" stroke-width="4" stroke-linecap="round"/>`;
+        }).join("") +
+        `<text x="${cx - R / 2}" y="${cy - R * 0.62}" font-family="${FONT}" font-size="18" font-weight="600" fill="#fff" text-anchor="middle">grass</text><text x="${cx + R / 2}" y="${cy - R * 0.62}" font-family="${FONT}" font-size="18" font-weight="600" fill="#fff" text-anchor="middle">mud</text>`;
+      case "habitats3": {
+        const segs = [["#6BBF59", "grass"], ["#4FA3E3", "river (fabric)"], ["#2E7D32", "forest"]];
+        return segs.map(([col, name], i) => {
+          const a0 = -Math.PI / 2 + (i * 2 * Math.PI) / 3, a1 = a0 + (2 * Math.PI) / 3, am = (a0 + a1) / 2;
+          const p = (a) => `${(cx + 1.2 * R * Math.cos(a)).toFixed(1)} ${(cy + 1.2 * R * Math.sin(a)).toFixed(1)}`;
+          return `<path d="M${cx} ${cy} L${p(a0)} A${1.2 * R} ${1.2 * R} 0 0 1 ${p(a1)}Z" fill="${col}" stroke="#fff" stroke-width="3"/>` +
+            Array.from({ length: 70 }, () => {
+              const ang = a0 + r() * (a1 - a0), d = Math.sqrt(r()) * R * 1.05, x = cx + d * Math.cos(ang), y = cy + d * Math.sin(ang);
+              return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l6 -5 l6 5 l6 -5" stroke="${["#A5D6A7", "#90CAF9", "#8D6E63"][i]}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+            }).join("") +
+            `<text x="${(cx + 0.62 * R * Math.cos(am)).toFixed(1)}" y="${(cy + 0.62 * R * Math.sin(am) + (i === 1 ? 0.2 * R : 0)).toFixed(1)}" font-family="${FONT}" font-size="18" font-weight="600" fill="#fff" text-anchor="middle" dominant-baseline="central">${name}</text>`;
+        }).join("");
+      }
+      case "sound": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#F3E5F5"/>` +
+        [0.3, 0.55, 0.8].map((k) => `<circle cx="${cx}" cy="${cy}" r="${(k * R).toFixed(1)}" fill="none" stroke="#E1BEE7" stroke-width="5" stroke-dasharray="14 10"/>`).join("");
       case "snow": return `<rect x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" fill="#E3F2FD"/>` + strokes(40, ["#FFFFFF", "#BBDEFB"], 18, 6);
       case "journey": {
         const zones = [["#6BBF59", "grass"], ["#4FA3E3", "river"], ["#6D4C41", "mud"], ["#2E7D32", "forest"], ["#ECEFF1", "snow"], ["#37474F", "cave"]];
@@ -377,7 +454,7 @@ const IBArt = (() => {
   }
 
   // Rasterise for PowerPoint export (fonts fall back to system fonts inside <img>).
-  function toPng(svg, scale = 2) {
+  function toPng(svg, scale = 2, type = "image/png") {
     return new Promise((resolve, reject) => {
       const m = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
       const w = Number(m[1]), h = Number(m[2]);
@@ -386,8 +463,10 @@ const IBArt = (() => {
         const cv = document.createElement("canvas");
         cv.width = w * scale;
         cv.height = h * scale;
-        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
-        resolve({ data: cv.toDataURL("image/png"), w, h });
+        const ctx = cv.getContext("2d");
+        if (type === "image/jpeg") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); }
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        resolve({ data: cv.toDataURL(type, 0.9), w, h });
       };
       img.onerror = () => reject(new Error("Could not render illustration"));
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);

@@ -12,12 +12,16 @@ that need the most attention and get AI-generated teaching strategies.
 - [Lesson Plan Generator](./lesson-plans/) — two generators in one page:
   - **Character Development Lesson Plans** — choose a level, language and topic
     to AI-generate ready-to-teach lesson plans, exported as Word documents.
-  - **iBrain Lesson Plans** — story-driven Tuff Tray curriculum for Playgroup
-    (2 YO, *We're Going on a Bear Hunt*) and Pre-Nursery (3 YO, *The Rainbow
-    Fish*): 8 weeks x 3 lessons (IB01/IB02/IB03, 30 mins) on the AGAPE iBrain
-    template, with SMART coded objectives, vector scene cards, tuff tray set-up
-    visions and word cards, exported as PowerPoint. The Term 1 design scaffold
-    lives in `supabase/functions/lesson-plans/ibrain-term1.ts`.
+  - **i-Brain Lesson Plans** — story-driven, mess-free Tuff Tray curriculum for
+    Playgroup (2 YO, *We're Going on a Bear Hunt*) and Pre-Nursery (3 YO, *The
+    Rainbow Fish*): 8 weeks x 3 lessons (IB01/IB02/IB03, 30 mins) on the AGAPE
+    i-Brain template (per-step objectives, Differentiation, Look For), SMART
+    coded objectives incl. C&L, SEC and ACE, vector scene cards, tuff tray
+    set-up visions and word cards. Exports: PowerPoint (Century Gothic) and a
+    printable resources PDF (A3 scene cards, tray posters with checklists and
+    Singapore sourcing, cut-out word cards). The Term 1 plan lives in
+    `supabase/functions/lesson-plans/ibrain-term1.ts` and is editable in the UI.
+    Generation uses free Gemini Flash-Lite / Gemma models first (highest limits).
 
 ## How it works
 
