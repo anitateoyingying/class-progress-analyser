@@ -207,7 +207,8 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `Pick codes ONLY from this official list:\n${cat}\n\n` +
     `ALSO PROVIDE:\n` +
     `- lessonTitle: a short child-friendly title for this lesson.\n` +
-    `- disposition: one PRAISE disposition and one sentence on what it looks like in this lesson.\n` +
+    `- disposition: one PRAISE disposition and one sentence on what it looks like in this lesson; the steps you link to ` +
+    `"Disposition" must show exactly that behaviour (e.g. Perseverance = a child keeps trying after something does not work).\n` +
     `- efSkills: 1-3 executive functioning skills; ALWAYS include ${ef}. "how" = the concrete game/strategy that exercises it ` +
     `(e.g. freeze game for Inhibitory Control, recalling the sound-word sequence for Working Memory, switching sorting rule for Cognitive Flexibility).\n` +
     `- steps: one entry per template step, in order, using the exact step names. For each: materials (specific, realistic, ` +
