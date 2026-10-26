@@ -14,7 +14,7 @@ const LINKS = [
   "Objective 4 (ACE - Art & Craft)", "Disposition", ...EF_SKILLS,
 ] as const;
 
-// Art and Craft and Tuffy Play run side by side (two groups of 9), so their 13 minutes overlap.
+// Art and Craft and Tuffy Play run side by side (the class split into two groups), so their 13 minutes overlap.
 const PAR = "runs at the same time as the other group; groups swap in IB03";
 interface SessionSpec { id: string; type: string; typeName: string; steps: [string, number, string?][] }
 const SESSIONS: Record<number, SessionSpec> = {
@@ -114,10 +114,18 @@ export function isRawIbrainLesson(v: unknown): v is RawIbrainLesson {
   return Array.isArray(l.steps) && Array.isArray(l.objectives) && typeof l.disposition === "object" && l.disposition !== null;
 }
 
+// Class sizes and staffing vary (often one main teacher), so group organisation is a general professional guideline.
+const GROUP_GUIDE =
+  "Split the class into two groups of similar size (mix confident and quieter children; keep any child who needs extra support " +
+  "near the teacher). Tuffy Play and Art and Craft run at the same time. Before the lesson, set up both stations and lay out the " +
+  "art materials ready to use. Start the art group on a simple, demonstrated task they can continue independently, then launch the " +
+  "tuff tray. Stand where you can see both stations, check in at each every 2-3 minutes, and use a song or chime to keep both groups " +
+  "on time. If an assistant or second adult is available, place them at the station that needs more hands-on help (usually Art and Craft).";
+
 const groupRotation = (session: number): string | null =>
   session === 1 ? null : session === 2
-    ? "18 children, 2 teachers, two concurrent groups of 9: Group A at the Tuff Tray with Teacher 1, Group B at Art & Craft with Teacher 2."
-    : "18 children, 2 teachers, two concurrent groups of 9, SWAPPED from IB02: Group B at the Tuff Tray with Teacher 1, Group A at Art & Craft with Teacher 2, so every child experiences both this week.";
+    ? GROUP_GUIDE + " In IB02, Group A starts at Tuffy Play and Group B at Art and Craft."
+    : GROUP_GUIDE + " In IB03 the groups swap (Group B at Tuffy Play, Group A at Art and Craft), so every child experiences both activities this week.";
 
 export const trayWonderingFor = (block: TuffBlock, week: number): string =>
   week === block.weeks[1] && block.wondering2 ? block.wondering2 : block.wondering;
@@ -139,13 +147,14 @@ function sessionGuidance(plan: TermPlan, wk: WeekPlan, block: TuffBlock, session
   return `This is ${SESSIONS[session].id}. ${groupRotation(session)} ` +
     `Tuning In (3 mins) and Storytelling (4 mins, using the A3 scene card "${wk.scene.title}" for picture talk - NOT a re-read) are whole class. ` +
     `"Art and Craft" and "Tuffy Play" are TWO SEPARATE steps that run at the same time (13 mins each): "Art and Craft" is for the ` +
-    `${session === 2 ? "Group B" : "Group A"} with Teacher 2 at the art table, "Tuffy Play" is for ${session === 2 ? "Group A" : "Group B"} with ` +
-    `Teacher 1 at the tuff tray. The groups stay at their station for the whole 13 minutes - do NOT rotate or swap groups within ` +
+    `${session === 2 ? "Group B" : "Group A"} at the art table, "Tuffy Play" is for ${session === 2 ? "Group A" : "Group B"} at the tuff tray, ` +
+    `usually with ONE main teacher supervising both stations (write "the teacher", never "Teacher 1/Teacher 2"; mention that a second ` +
+    `adult may help if available). The groups stay at their station for the whole 13 minutes - do NOT rotate or swap groups within ` +
     `this lesson (the swap happens between IB02 and IB03). Give each step its own materials, process and intentional links, including how the teacher positions ` +
-    `the 9 children and manages turns. Do not mix tray materials into the art step or art materials into the tray step. ` +
+    `the children and keeps the art group working independently while facilitating the tray. Do not mix tray materials into the art step or art materials into the tray step. ` +
     `Art & Craft this week: "${wk.artCraft.title}" - ${wk.artCraft.description} ${tray} ` +
     (session === 3
-      ? `IB03 must DEEPEN rather than repeat IB02: new tuning-in hook, a different scene-card question, harder/extended questioning at the tray, and children recalling what the other group discovered in IB02.`
+      ? `IB03 must DEEPEN rather than repeat IB02: new tuning-in hook, a different scene-card question, harder/extended questioning at the tray, and children who were at the tray in IB02 telling the others one thing they found.`
       : `IB02 introduces the tray and the art activity; capture children's first discoveries to share in IB03.`);
 }
 
@@ -169,7 +178,8 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `discovery, puppetry, songs). Art and Craft = fine-motor 2-D/3-D work linked to the focus. Cleaning Up = children clean and ` +
     `pack up (wipe, return items, wash hands/tools). Cooling Down = calm down (soothing music, close eyes and rest on own mat). ` +
     `Wrap Up = recall and reinforce (a story, song, rhyme, word/phrase or action).\n\n` +
-    `CLASS: ${plan.levelLabel}, a Singapore classroom of 18 children with 2 teachers. Developmental profile:\n- ` +
+    `CLASS: ${plan.levelLabel}, a Singapore classroom (class size varies, up to about 18 children) usually led by ONE main ` +
+    `teacher, sometimes with an assistant. Developmental profile:\n- ` +
     `${plan.developmental.join("\n- ")}\n\n` +
     `TERM ${plan.term}: Wondering "${plan.wondering}". Story: "${plan.story}" by ${plan.author}. ${plan.connection} ` +
     `Character values (CDP): ${plan.cdpValues.join(", ")}. Language exposure: ${plan.languageExposure} ` +
@@ -223,11 +233,16 @@ export function buildIbrainPrompt(plan: TermPlan, req: IbrainRequest, catalogue:
     `MAKING (drawing, scribbling, painting strokes), so collage, gluing or pressing pieces uses ACE.2.1 (manipulating materials ` +
     `and media) instead; ACE.3.2 is making sounds; ACE.3.3 is imaginative/pretend play; NE.2.1 at Pre-Nursery is classifying ` +
     `by one attribute, not general exploring.\n` +
-    `- CLASS MANAGEMENT for 18 children: never have children take individual turns one by one in front of the whole group. Use ` +
-    `whole-group simultaneous responses (everyone points, says, moves together), pairs, or small clusters of 3-6 led by each ` +
-    `teacher, so no child waits more than about ${plan.level === "pg" ? "30 seconds" : "1 minute"}. There are only 2 teachers: ` +
-    `never plan more than 2 adult-led groups at once. In Wrap Up, a few children share while the rest respond together ` +
-    `(thumbs up, echo, actions) - never all 18 one by one.\n` +
+    `- CLASS MANAGEMENT for one main teacher: never have children take individual turns one by one in front of the whole group. ` +
+    `Use whole-group simultaneous responses (everyone points, says, moves together) or pairs, so no child waits more than about ` +
+    `${plan.level === "pg" ? "30 seconds" : "1 minute"}. Never plan more than one adult-led group at a time (the other group works ` +
+    `independently). In Wrap Up, a few children share while the rest respond together (thumbs up, echo, actions) - never every ` +
+    `child one by one.\n` +
+    `- MATERIALS: use ONLY the materials named in this week's plan (tray set-up, add-on and art & craft description) plus basic ` +
+    `classroom supplies (paper, card, crayons, washable paint, brushes, glue sticks, PVA glue, tape, contact paper, scissors for ` +
+    `the teacher, wet wipes, mats, music player). Do not add any other or hard-to-find materials (no faux fur, pinecones, googly ` +
+    `eyes, sequins, beads, slime, water beads). For size safety, use only the guideline "larger than 4.5 cm"; never state any other ` +
+    `size threshold.\n` +
     `- differentiation: support (for a hesitant or younger child) and stretch (for a confident child).\n` +
     `- lookFors: exactly ${req.session === 1 ? 3 : 4} observable success criteria, one per objective, in the same order, phrased so a teacher can tick them.\n` +
     (req.session === 1 ? "" : `- The "Art and Craft" step must show how the ACE objective (Objective 4) and its learning goal are ` +

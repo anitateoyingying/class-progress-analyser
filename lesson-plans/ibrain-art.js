@@ -3,7 +3,8 @@
 // Original artwork built from the Term 1 scaffold layouts (no copyrighted book art is reproduced).
 
 const IBArt = (() => {
-  const FONT = "Fredoka, 'Arial Rounded MT Bold', Nunito, Arial, sans-serif";
+  // Andika: SIL's typeface for beginning readers (single-storey a). Embedded when rasterising (see toPng).
+  const FONT = "Andika, 'Century Gothic', sans-serif";
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const RAINBOW = ["#E53935", "#FB8C00", "#FDD835", "#43A047", "#1E88E5", "#3949AB", "#8E24AA"];
   let uid = 0;
@@ -25,6 +26,35 @@ const IBArt = (() => {
       scared: `<ellipse cx="0" cy="${my + r * 0.05}" rx="${r * 0.16}" ry="${r * 0.22}" fill="${ink}"/>`,
     };
     return eyes + (mouths[mood] || mouths.happy);
+  }
+
+  const PEOPLE = {
+    dad: { sc: 1, skin: "#C68642", shirt: "#1E88E5", pants: "#37474F", hair: "#3E2723", style: "short" },
+    mum: { sc: 1, skin: "#F1C27D", shirt: "#E2707C", pants: "#E2707C", hair: "#6D4C41", style: "long", dress: true },
+    girl: { sc: 0.78, skin: "#8D5524", shirt: "#FDD835", pants: "#FDD835", hair: "#212121", style: "pigtails", dress: true },
+    boy: { sc: 0.78, skin: "#E0AC69", shirt: "#43A047", pants: "#5D4037", hair: "#4E342E", style: "spiky" },
+    baby: { sc: 0.55, skin: "#FFDBAC", shirt: "#B39DDB", pants: "#B39DDB", hair: "#A1887F", style: "curl" },
+  };
+  // Full-body figure, feet at about +1.2u, head at about -1.1u (scaled by age).
+  function person(type, u0) {
+    const p = PEOPLE[type], u = u0 * p.sc, ink = "#3D3229", lw = 0.04 * u;
+    const legs = [-0.17, 0.17].map((x) => `<rect x="${(x - 0.1) * u}" y="${0.35 * u}" width="${0.2 * u}" height="${0.75 * u}" rx="${0.08 * u}" fill="${p.pants}" stroke="${ink}" stroke-width="${lw}"/><ellipse cx="${(x + (x < 0 ? -0.05 : 0.05)) * u}" cy="${1.12 * u}" rx="${0.17 * u}" ry="${0.09 * u}" fill="${ink}"/>`).join("");
+    const arms = [-1, 1].map((d) => `<path d="M${d * 0.32 * u} ${-0.3 * u} L${d * 0.55 * u} ${0.25 * u}" stroke="${p.shirt}" stroke-width="${0.17 * u}" stroke-linecap="round"/><circle cx="${d * 0.58 * u}" cy="${0.32 * u}" r="${0.1 * u}" fill="${p.skin}"/>`).join("");
+    const torso = p.dress
+      ? `<path d="M${-0.3 * u} ${-0.4 * u} L${0.3 * u} ${-0.4 * u} L${0.48 * u} ${0.5 * u} L${-0.48 * u} ${0.5 * u}Z" fill="${p.shirt}" stroke="${ink}" stroke-width="${lw}" stroke-linejoin="round"/>`
+      : `<rect x="${-0.35 * u}" y="${-0.42 * u}" width="${0.7 * u}" height="${0.85 * u}" rx="${0.16 * u}" fill="${p.shirt}" stroke="${ink}" stroke-width="${lw}"/>`;
+    const hy = -0.8 * u, hr = 0.38 * u;
+    const hairBack = p.style === "long" ? `<path d="M${-0.42 * u} ${hy} Q${-0.5 * u} ${-0.2 * u} ${-0.3 * u} ${-0.25 * u} L${0.3 * u} ${-0.25 * u} Q${0.5 * u} ${-0.2 * u} ${0.42 * u} ${hy}Z" fill="${p.hair}"/>` : "";
+    const hairFront = {
+      short: `<path d="M${-0.38 * u} ${hy - 0.02 * u} Q0 ${hy - 0.62 * u} ${0.38 * u} ${hy - 0.02 * u} Q0 ${hy - 0.25 * u} ${-0.38 * u} ${hy - 0.02 * u}Z" fill="${p.hair}"/>`,
+      long: `<path d="M${-0.4 * u} ${hy + 0.05 * u} Q0 ${hy - 0.65 * u} ${0.4 * u} ${hy + 0.05 * u} Q0 ${hy - 0.22 * u} ${-0.4 * u} ${hy + 0.05 * u}Z" fill="${p.hair}"/>`,
+      pigtails: `<path d="M${-0.38 * u} ${hy} Q0 ${hy - 0.6 * u} ${0.38 * u} ${hy} Q0 ${hy - 0.25 * u} ${-0.38 * u} ${hy}Z" fill="${p.hair}"/><circle cx="${-0.45 * u}" cy="${hy + 0.05 * u}" r="${0.14 * u}" fill="${p.hair}"/><circle cx="${0.45 * u}" cy="${hy + 0.05 * u}" r="${0.14 * u}" fill="${p.hair}"/>`,
+      spiky: `<path d="M${-0.38 * u} ${hy} l${0.12 * u} ${-0.35 * u} l${0.12 * u} ${0.15 * u} l${0.14 * u} ${-0.3 * u} l${0.12 * u} ${0.2 * u} l${0.15 * u} ${-0.28 * u} l${0.07 * u} ${0.58 * u} Q0 ${hy - 0.2 * u} ${-0.38 * u} ${hy}Z" fill="${p.hair}"/>`,
+      curl: `<path d="M${-0.05 * u} ${hy - hr} q${0.15 * u} ${-0.2 * u} ${0.2 * u} 0" stroke="${p.hair}" stroke-width="${0.06 * u}" fill="none"/>`,
+    }[p.style];
+    const face = `<circle cx="${-0.13 * u}" cy="${hy - 0.02 * u}" r="${0.045 * u}" fill="${ink}"/><circle cx="${0.13 * u}" cy="${hy - 0.02 * u}" r="${0.045 * u}" fill="${ink}"/>` +
+      `<path d="M${-0.12 * u} ${hy + 0.14 * u} Q0 ${hy + 0.25 * u} ${0.12 * u} ${hy + 0.14 * u}" stroke="${ink}" stroke-width="${0.035 * u}" fill="none" stroke-linecap="round"/>`;
+    return `<g transform="translate(0,${(1 - p.sc) * 1.15 * u0})">${hairBack}${legs}${arms}${torso}<circle cy="${hy}" r="${hr}" fill="${p.skin}" stroke="${ink}" stroke-width="${lw}"/>${hairFront}${face}</g>`;
   }
 
   function fishShape(c, u, t) {
@@ -109,6 +139,25 @@ const IBArt = (() => {
       case "fur":
         return `<rect x="${-0.45 * u}" y="${-0.35 * u}" width="${0.9 * u}" height="${0.7 * u}" rx="${0.12 * u}" fill="#A1887F"/>` +
           Array.from({ length: 14 }, (_, i) => `<path d="M${((i % 5) - 2) * 0.18 * u} ${(Math.floor(i / 5) - 1) * 0.22 * u} q${0.04 * u} ${-0.1 * u} ${0.08 * u} 0" stroke="#6D4C41" stroke-width="${0.035 * u}" fill="none"/>`).join("");
+      case "dad": case "mum": case "girl": case "boy": case "baby": return person(it.k, u);
+      case "dog": {
+        const c2 = "#C8A26B", dk = "#8D6E63";
+        return `<path d="M${0.75 * u} ${-0.1 * u} q${0.35 * u} ${-0.35 * u} ${0.3 * u} ${-0.6 * u}" stroke="${c2}" stroke-width="${0.12 * u}" fill="none" stroke-linecap="round"/>` +
+          [-0.5, -0.25, 0.4, 0.62].map((x) => `<rect x="${x * u}" y="${0.1 * u}" width="${0.16 * u}" height="${0.55 * u}" rx="${0.07 * u}" fill="${c2}" stroke="${dk}" stroke-width="${0.03 * u}"/>`).join("") +
+          `<ellipse cx="${0.1 * u}" cy="${0 * u}" rx="${0.8 * u}" ry="${0.38 * u}" fill="${c2}" stroke="${dk}" stroke-width="${0.04 * u}"/>` +
+          `<circle cx="${-0.75 * u}" cy="${-0.35 * u}" r="${0.36 * u}" fill="${c2}" stroke="${dk}" stroke-width="${0.04 * u}"/>` +
+          `<ellipse cx="${-0.98 * u}" cy="${-0.25 * u}" rx="${0.22 * u}" ry="${0.15 * u}" fill="#E6C89A"/><circle cx="${-1.15 * u}" cy="${-0.3 * u}" r="${0.07 * u}" fill="#3D3229"/>` +
+          `<ellipse cx="${-0.55 * u}" cy="${-0.45 * u}" rx="${0.13 * u}" ry="${0.28 * u}" fill="${dk}" transform="rotate(20 ${-0.55 * u} ${-0.45 * u})"/><circle cx="${-0.8 * u}" cy="${-0.45 * u}" r="${0.05 * u}" fill="#3D3229"/>`;
+      }
+      case "bearfull": {
+        const br = "#7B5236", dk = "#4E342E";
+        return [-0.75, -0.35, 0.35, 0.75].map((x) => `<rect x="${(x - 0.16) * u}" y="${0.25 * u}" width="${0.34 * u}" height="${0.75 * u}" rx="${0.14 * u}" fill="${br}" stroke="${dk}" stroke-width="${0.04 * u}"/>`).join("") +
+          `<ellipse cx="0" cy="${0.05 * u}" rx="${1.05 * u}" ry="${0.62 * u}" fill="${br}" stroke="${dk}" stroke-width="${0.05 * u}"/>` +
+          `<circle cx="${-0.95 * u}" cy="${-0.55 * u}" r="${0.55 * u}" fill="${br}" stroke="${dk}" stroke-width="${0.05 * u}"/>` +
+          [-1.3, -0.62].map((x) => `<circle cx="${x * u}" cy="${-1.0 * u}" r="${0.2 * u}" fill="${br}" stroke="${dk}" stroke-width="${0.04 * u}"/><circle cx="${x * u}" cy="${-1.0 * u}" r="${0.1 * u}" fill="#A1887F"/>`).join("") +
+          `<ellipse cx="${-1.08 * u}" cy="${-0.38 * u}" rx="${0.26 * u}" ry="${0.19 * u}" fill="#BCAAA4"/><ellipse cx="${-1.2 * u}" cy="${-0.44 * u}" rx="${0.1 * u}" ry="${0.07 * u}" fill="#212121"/><circle cx="${-1.23 * u}" cy="${-0.47 * u}" r="${0.03 * u}" fill="#fff"/>` +
+          [-1.12, -0.82].map((x) => `<circle cx="${x * u}" cy="${-0.68 * u}" r="${0.09 * u}" fill="#fff"/><circle cx="${(x - 0.02) * u}" cy="${-0.67 * u}" r="${0.05 * u}" fill="#212121"/>`).join("");
+      }
       case "corkboard":
         return `<rect x="${-0.75 * u}" y="${-0.55 * u}" width="${1.5 * u}" height="${1.1 * u}" rx="${0.08 * u}" fill="#C8A26B" stroke="#8D6E63" stroke-width="${0.06 * u}"/>` +
           Array.from({ length: 9 }, (_, i) => `<circle cx="${((i % 3) - 1) * 0.45 * u}" cy="${(Math.floor(i / 3) - 1) * 0.32 * u}" r="${0.04 * u}" fill="#A47D4F"/>`).join("");
@@ -245,7 +294,9 @@ const IBArt = (() => {
       case "bed":
         return `<rect x="${-0.8 * u}" y="${-0.2 * u}" width="${1.6 * u}" height="${0.6 * u}" rx="${0.08 * u}" fill="#8D6E63"/><rect x="${-0.75 * u}" y="${-0.4 * u}" width="${0.35 * u}" height="${0.25 * u}" rx="${0.08 * u}" fill="#fff"/><path d="M${-0.35 * u} ${-0.3 * u} L${0.8 * u} ${-0.3 * u} L${0.8 * u} ${0.2 * u} L${-0.35 * u} ${0.2 * u}Z" fill="#E2707C"/>` +
           [0, 0.35].map((x) => `<line x1="${x * u}" y1="${-0.3 * u}" x2="${x * u}" y2="${0.2 * u}" stroke="#fff" stroke-width="${0.05 * u}"/>`).join("") +
-          [-0.2, 0.05, 0.3].map((x) => `<circle cx="${x * u}" cy="${-0.38 * u}" r="${0.1 * u}" fill="#FFCC80"/>`).join("");
+          [[-0.2, "#C68642", "#3E2723"], [0.05, "#8D5524", "#212121"], [0.3, "#E0AC69", "#4E342E"]].map(([x, sk, hr]) =>
+            `<circle cx="${x * u}" cy="${-0.36 * u}" r="${0.11 * u}" fill="${sk}"/><path d="M${(x - 0.11) * u} ${-0.38 * u} Q${x * u} ${-0.55 * u} ${(x + 0.11) * u} ${-0.38 * u}Z" fill="${hr}"/>` +
+            `<circle cx="${(x - 0.04) * u}" cy="${-0.35 * u}" r="${0.018 * u}" fill="#212121"/><circle cx="${(x + 0.04) * u}" cy="${-0.35 * u}" r="${0.018 * u}" fill="#212121"/>`).join("");
       case "speech": {
         const hw = Math.max(1.6, (it.t || "").length * 0.1 + 0.4);
         return `<rect x="${-hw * u}" y="${-0.4 * u}" width="${2 * hw * u}" height="${0.8 * u}" rx="${0.35 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><path d="M${-0.2 * u} ${0.38 * u} L0 ${0.8 * u} L${0.25 * u} ${0.38 * u}" fill="#fff" stroke="#3D3229" stroke-width="${0.04 * u}"/><text y="${0.02 * u}" font-family="${FONT}" font-size="${0.36 * u}" text-anchor="middle" dominant-baseline="central" fill="#3D3229">${esc(it.t || "")}</text>`;
@@ -432,34 +483,54 @@ const IBArt = (() => {
     }
   }
 
-  function scene(sc) {
+  function scene(sc, footer = "") {
     const W = 800, H = 500, u = 46;
     const items = sc.items.map((it) => place(it, it.x * W, it.y * H, u)).join("");
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H + 64}" width="${W}" height="${H + 64}" role="img" aria-label="Scene card: ${esc(sc.title)}">${DEFS}` +
       `<rect width="${W}" height="${H + 64}" rx="18" fill="#FFFDF8"/>` +
       `<clipPath id="sc${uid}"><rect width="${W}" height="${H}" rx="18"/></clipPath><g clip-path="url(#sc${uid++})">${sceneBg(sc.bg, W, H)}${items}</g>` +
-      `<text x="${W / 2}" y="${H + 38}" font-family="${FONT}" font-size="30" font-weight="600" fill="#3D3229" text-anchor="middle">${esc(sc.title)}</text></svg>`;
+      `<text x="${W / 2}" y="${H + 38}" font-family="${FONT}" font-size="30" font-weight="700" fill="#222" text-anchor="middle">${esc(sc.title)}</text>` +
+      (footer ? `<text x="14" y="${H + 58}" font-family="${FONT}" font-size="13" fill="#555">${esc(footer)}</text>` : "") + `</svg>`;
   }
 
-  const CARD_COLS = ["#D6337F", "#58B368", "#F4A259", "#2A78D6", "#8E24AA"];
-  function wordCard(w, i) {
+  function wordCard(w, i, footer = "") {
     const W = 300, H = 230;
     const icon = w.icon.startsWith("e:")
       ? `<text x="${W / 2}" y="92" font-size="86" text-anchor="middle" dominant-baseline="central">${esc(w.icon.slice(2))}</text>`
       : place(w.icon.includes(":") ? { k: w.icon.split(":")[0], t: w.icon.split(":")[1] } : { k: w.icon, c: "#F4A259" }, W / 2, 95, 80);
     const fs = w.word.length > 12 ? 30 : 40;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Word card: ${esc(w.word)}">${DEFS}` +
-      `<rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="22" fill="#fff" stroke="${CARD_COLS[i % CARD_COLS.length]}" stroke-width="8"/>${icon}` +
-      `<text x="${W / 2}" y="196" font-family="${FONT}" font-size="${fs}" font-weight="600" fill="#3D3229" text-anchor="middle">${esc(w.word)}</text></svg>`;
+      `<rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="22" fill="#fff" stroke="#222" stroke-width="5"/>${icon}` +
+      `<text x="${W / 2}" y="184" font-family="${FONT}" font-size="${fs}" font-weight="700" fill="#222" text-anchor="middle">${esc(w.word)}</text>` +
+      (footer ? `<text x="18" y="${H - 14}" font-family="${FONT}" font-size="12" fill="#555">${esc(footer)}</text>` : "") + `</svg>`;
   }
 
   // Rasterise for PowerPoint export (fonts fall back to system fonts inside <img>).
-  function toPng(svg, scale = 2, type = "image/png") {
+  let fontCss = null;
+  async function fontFaces() {
+    if (!fontCss) {
+      const b64 = async (url) => {
+        const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        return btoa(bin);
+      };
+      const [reg, bold] = await Promise.all([b64("fonts/Andika-Regular.ttf"), b64("fonts/Andika-Bold.ttf")]);
+      fontCss = { reg, bold, css: `@font-face{font-family:Andika;font-weight:400;src:url(data:font/ttf;base64,${reg}) format("truetype")}` +
+        `@font-face{font-family:Andika;font-weight:700;src:url(data:font/ttf;base64,${bold}) format("truetype")}` };
+    }
+    return fontCss;
+  }
+
+  async function toPng(svgIn, scale = 2, type = "image/png") {
+    // <img> SVGs cannot see page fonts, so embed Andika directly in the SVG before rasterising.
+    const { css } = await fontFaces();
+    const svg = svgIn.replace(/<svg([^>]*)>/, `<svg$1><style>${css}</style>`);
     return new Promise((resolve, reject) => {
       const m = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
       const w = Number(m[1]), h = Number(m[2]);
       const img = new Image();
-      img.onload = () => {
+      img.onload = () => setTimeout(() => {
         const cv = document.createElement("canvas");
         cv.width = w * scale;
         cv.height = h * scale;
@@ -467,11 +538,12 @@ const IBArt = (() => {
         if (type === "image/jpeg") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); }
         ctx.drawImage(img, 0, 0, cv.width, cv.height);
         resolve({ data: cv.toDataURL(type, 0.9), w, h });
-      };
+      }, 60);
+      img.decoding = "sync";
       img.onerror = () => reject(new Error("Could not render illustration"));
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     });
   }
 
-  return { tray, scene, wordCard, toPng };
+  return { tray, scene, wordCard, toPng, fontFaces };
 })();

@@ -197,3 +197,9 @@
 .ib-step-obj .ib-intent { border-top: 0; margin-top: 0.25rem; padding-top: 0; }
 .ib-source { font-size: 0.82rem; color: var(--text-secondary); }
 @media (max-width: 760px) { .ib-step-grid { grid-template-columns: 1fr; } .ib-step-obj { border-left: 0; padding-left: 0; border-top: 1.5px dashed var(--baseline); padding-top: 0.4rem; } }
+.ib-table tr.ib-follow th, .ib-table tr.ib-follow td { background: #fff4c2; }
+@media (prefers-color-scheme: dark) { .ib-table tr.ib-follow th, .ib-table tr.ib-follow td { background: #4a4220; } }
+
+/* Andika (SIL OFL): learner-friendly font with single-storey a, used in all i-Brain illustrations */
+@font-face { font-family: Andika; font-weight: 400; src: url("fonts/Andika-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: Andika; font-weight: 700; src: url("fonts/Andika-Bold.ttf") format("truetype"); font-display: swap; }

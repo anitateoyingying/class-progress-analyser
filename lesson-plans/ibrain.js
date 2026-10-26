@@ -351,7 +351,7 @@
       cols.appendChild(c);
     }
     struct.appendChild(cols);
-    struct.appendChild(el("p", "muted", "IB02 and IB03: 18 children in two groups of 9 run Art & Craft and Tuff Tray at the same time with one teacher each, then swap in IB03 so every child does both. Each tuff tray set-up stays for 2 weeks; week 2 only adds on."));
+    struct.appendChild(el("p", "muted", "IB02 and IB03: the class splits into two groups that run Art & Craft and Tuffy Play at the same time (usually one main teacher overseeing both), then swap in IB03 so every child does both. Each tuff tray set-up stays for 2 weeks; week 2 only adds on."));
     wrap.appendChild(struct);
 
     const trayD = el("details", "ib-details");
@@ -445,7 +445,7 @@
     const res = el("div", "ib-resources");
     const sc = el("figure", "ib-figure");
     const artOk = weekArtOk(term.level, w.week);
-    sc.appendChild(artOk ? svgBox(IBArt.scene(w.scene), "ib-art", `A3 scene card: ${w.scene.title}`) : artHidden());
+    sc.appendChild(artOk ? svgBox(IBArt.scene(w.scene, cardFooter(term)), "ib-art", `A3 scene card: ${w.scene.title}`) : artHidden());
     const cap = el("figcaption");
     cap.appendChild(el("strong", null, "A3 scene card for picture talk"));
     const ul = el("ul");
@@ -468,7 +468,7 @@
 
     const words = el("div", "ib-words");
     words.setAttribute("aria-label", "Word cards");
-    if (artOk) w.words.forEach((wd, i) => words.appendChild(svgBox(IBArt.wordCard(wd, i), "ib-word", `Word card: ${wd.word}`)));
+    if (artOk) w.words.forEach((wd, i) => words.appendChild(svgBox(IBArt.wordCard(wd, i, cardFooter(term)), "ib-word", `Word card: ${wd.word}`)));
     const wl = el("p", "ib-words-label", `Word cards · key language: ${w.keyLanguage.join(", ")}`);
     sec.appendChild(wl);
     sec.appendChild(words);
@@ -504,6 +504,8 @@
     return lessonCard(lesson, term, week, session, state);
   }
 
+  // Bottom-left label on printable cards, e.g. "i-Brain PG T1".
+  const cardFooter = (term) => `i-Brain ${term.level.toUpperCase()} T${termNo(term)}`;
   const chip = (text, cls) => el("span", `ib-chip ${cls || ""}`, text);
 
   function row(tbl, label, content, label2, content2) {
@@ -595,11 +597,13 @@
       } else c.appendChild(pl);
       row(t, `${s.name} (${s.minutes} mins${s.parallel ? ", in parallel" : ""})`, c);
     }
+    const followStart = t.rows.length;
     row(t, "Rehearse and Retrieve", frag(el("strong", null, "Teacher Prompt: "), l.rehearseRetrieve.teacherPrompt, el("br"), el("strong", null, "Extension: "), l.rehearseRetrieve.extension));
     row(t, "Differentiation", frag(el("strong", null, "Support: "), l.differentiation.support, el("br"), el("strong", null, "Stretch: "), l.differentiation.stretch));
     const lf = el("ul", "ib-check");
     l.lookFors.forEach((x) => lf.appendChild(el("li", null, x)));
     row(t, "Look For", lf);
+    [...t.rows].slice(followStart).forEach((r) => r.classList.add("ib-follow"));
     const scroll = el("div", "ib-table-wrap");
     scroll.appendChild(t);
     art.appendChild(scroll);
@@ -632,7 +636,7 @@
     ]);
     rows.push([cellL("Lesson Objectives"), span3([
       { text: "Children will be able to:", options: { bold: true } },
-      ...l.objectives.map((o, i) => `${i + 1}. [${o.label}] ${o.text} (${o.code})${o.goal ? ` | Learning goal: ${o.goal}` : ""}`),
+      ...l.objectives.map((o, i) => `${i + 1}. ${o.text} (${o.code})${o.goal ? ` | Learning goal: ${o.goal}` : ""}`),
     ])]);
     if (l.groupRotation) rows.push([cellL("Group Organisation"), span3([l.groupRotation, { text: l.trayStage, options: { italic: true } }])]);
     for (const s of l.steps) {
@@ -649,9 +653,11 @@
         ]), options: { valign: "top" } }]
         : [label, span3(body)]);
     }
-    rows.push([cellL("Rehearse and Retrieve"), span3([`Teacher Prompt: ${l.rehearseRetrieve.teacherPrompt}`, `Extension: ${l.rehearseRetrieve.extension}`])]);
-    rows.push([cellL("Differentiation"), span3([`Support: ${l.differentiation.support}`, `Stretch: ${l.differentiation.stretch}`])]);
-    rows.push([cellL("Look For"), span3(l.lookFors.map((x) => `☐ ${x}`))]);
+    // Pale yellow sets the follow-up rows apart from the lesson steps.
+    const yellow = (cells) => cells.map((c) => ({ ...c, options: { ...(c.options || {}), fill: { color: "FFF4C2" } } }));
+    rows.push(yellow([cellL("Rehearse and Retrieve"), span3([`Teacher Prompt: ${l.rehearseRetrieve.teacherPrompt}`, `Extension: ${l.rehearseRetrieve.extension}`])]));
+    rows.push(yellow([cellL("Differentiation"), span3([`Support: ${l.differentiation.support}`, `Stretch: ${l.differentiation.stretch}`])]));
+    rows.push(yellow([cellL("Look For"), span3(l.lookFors.map((x) => `☐ ${x}`))]));
     return rows;
   }
 
@@ -695,7 +701,7 @@
     const fix = (runs) => runs.map((r, i) => ({ text: r.text, options: { ...r.options, breakLine: i < runs.length - 1 } }));
     const contLabel = { ...label, text: `${String(label.text).split("\n")[0]}\n(cont.)` };
     const first = obj ? [label, { ...body, text: fix(body.text.slice(0, k)) }, obj] : [label, { ...body, text: fix(body.text.slice(0, k)) }];
-    return [first, [contLabel, { text: fix(body.text.slice(k)), options: { colspan: 3, valign: "top" } }]];
+    return [first, [contLabel, { text: fix(body.text.slice(k)), options: { ...(body.options || {}), colspan: 3, valign: "top" } }]];
   }
   function paginate(rows, headerRows, colW, fontSize) {
     const head = rows.slice(0, headerRows), body = rows.slice(headerRows);
@@ -704,7 +710,8 @@
     let cur = [], used = headH;
     while (body.length) {
       const r = body.shift(), h = rowH(r, colW, fontSize);
-      if (used + h <= PAGE_H) { cur.push(r); used += h; continue; }
+      // Estimates run ~0.8in conservative, so a row that overshoots slightly stays rather than orphaning a line.
+      if (used + h <= PAGE_H + 0.55) { cur.push(r); used += h; continue; }
       const parts = splitRow(r, colW, fontSize, PAGE_H - used);
       if (parts && PAGE_H - used > 0.8) { cur.push(parts[0]); body.unshift(parts[1]); }
       else if (!cur.length) { cur.push(r); used += h; continue; } // a lone oversized row still gets its own page
@@ -759,7 +766,7 @@
         [cellL("Focus"), { text: term.focus }],
         [cellL("Language exposure"), { text: term.languageExposure }],
         [cellL("Lesson structure"), { text: runs(STRUCTURE.map((s) => `${s.id} ${s.name}: ${s.steps.map(([n, m]) => `${n} ${m}m`).join(" → ")} → Rehearse and Retrieve`)) }],
-        [cellL("Class organisation"), { text: "18 children, 2 teachers. IB02/IB03: two groups of 9 run Art & Craft and Tuff Tray concurrently and swap in IB03. Each tuff tray set-up stays for 2 weeks; week 2 adds on." }],
+        [cellL("Class organisation"), { text: "Class size and staffing vary (often one main teacher). IB02/IB03: the class splits into two groups that run Art & Craft and Tuffy Play concurrently and swap in IB03. Each tuff tray set-up stays for 2 weeks; week 2 adds on." }],
       ], { ...TABLE_OPTS, colW: [1.6, 5.2] });
 
       addPagedTable(add, [
@@ -794,7 +801,7 @@
         const s1 = add();
         s1.addText(`${term.shortLabel} Term ${termNo(term)} i-Brain Lesson ${wk} - Resources`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
         if (sceneOk) {
-          const sceneImg = await IBArt.toPng(IBArt.scene(w.scene));
+          const sceneImg = await IBArt.toPng(IBArt.scene(w.scene, cardFooter(term)));
           s1.addText("A3 scene card (print on A3 for picture talk)", { x: 0.35, y: 1.0, w: 6.8, h: 0.3, fontFace: P.face, fontSize: 11, bold: true });
           s1.addImage({ data: sceneImg.data, x: 0.35, y: 1.35, w: 6.8, h: (6.8 * sceneImg.h) / sceneImg.w });
           s1.addText(runs([{ text: "Picture talk questions:", options: { bold: true } }, ...w.scene.prompts.map((p) => `• ${p}`)]), { x: 0.35, y: 6.0, w: 6.8, h: 1.1, fontFace: P.face, fontSize: 10, valign: "top" });
@@ -808,7 +815,7 @@
         const s2 = add();
         s2.addText(`Week ${wk} word cards`, { x: 0.35, y: 0.4, w: 5.6, h: 0.45, fontFace: P.face, fontSize: 16, bold: true });
         for (let i = 0; i < w.words.length; i++) {
-          const img = await IBArt.toPng(IBArt.wordCard(w.words[i], i));
+          const img = await IBArt.toPng(IBArt.wordCard(w.words[i], i, cardFooter(term)));
           s2.addImage({ data: img.data, x: 0.45 + (i % 2) * 3.35, y: 1.1 + Math.floor(i / 2) * 2.7, w: 3.1, h: (3.1 * img.h) / img.w });
         }
       }
@@ -832,15 +839,20 @@
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const ink = () => doc.setTextColor(61, 50, 41);
+      const { reg, bold } = await IBArt.fontFaces();
+      doc.addFileToVFS("Andika-Regular.ttf", reg);
+      doc.addFont("Andika-Regular.ttf", "Andika", "normal");
+      doc.addFileToVFS("Andika-Bold.ttf", bold);
+      doc.addFont("Andika-Bold.ttf", "Andika", "bold");
+      const ink = () => doc.setTextColor(34, 34, 34);
       const wrapText = (text, x, y, w, size, style = "normal") => {
-        doc.setFont("helvetica", style);
+        doc.setFont("Andika", style === "bold" ? "bold" : "normal");
         doc.setFontSize(size);
         const lines = doc.splitTextToSize(String(text), w);
         doc.text(lines, x, y);
         return y + lines.length * size * 0.42;
       };
-      const footer = (txt) => { doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text(txt, 10, doc.internal.pageSize.getHeight() - 6); ink(); };
+      const footer = (txt) => { doc.setFont("Andika", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text(txt, 10, doc.internal.pageSize.getHeight() - 6); ink(); };
       const title = `i-Brain ${term.shortLabel} Term ${termNo(term)}: ${term.story}`;
 
       // cover
@@ -885,11 +897,12 @@
       for (const w of term.weeks) {
         if (!weekArtOk(level, w.week)) continue;
         doc.addPage("a3", "landscape");
-        const img = await IBArt.toPng(IBArt.scene(w.scene), 3, "image/jpeg");
-        const pw = 400, ph = (pw * img.h) / img.w;
-        doc.addImage(img.data, "JPEG", 10, 10, pw, ph);
+        const img = await IBArt.toPng(IBArt.scene(w.scene, cardFooter(term)), 3, "image/jpeg");
+        // A3 landscape is 420 x 297 mm: leave room under the card for the picture-talk line and page footer.
+        const pw = 370, ph = (pw * img.h) / img.w;
+        doc.addImage(img.data, "JPEG", (420 - pw) / 2, 8, pw, ph);
         ink();
-        wrapText(`Week ${w.week} picture talk: ${w.scene.prompts.join("   ·   ")}`, 12, 10 + ph + 8, 396, 10, "italic");
+        wrapText(`Week ${w.week} picture talk: ${w.scene.prompts.join("   ·   ")}`, (420 - pw) / 2, 8 + ph + 7, pw, 10);
         footer(`${title} · Week ${w.week} scene card (A3)`);
       }
 
@@ -901,7 +914,7 @@
         wrapText(`Week ${w.week} word cards: ${w.title}  (cut along the dashed lines)`, 10, 12, 190, 11, "bold");
         const cw = 90, ch = 69;
         for (let i = 0; i < w.words.length; i++) {
-          const img = await IBArt.toPng(IBArt.wordCard(w.words[i], i), 2.5, "image/jpeg");
+          const img = await IBArt.toPng(IBArt.wordCard(w.words[i], i, cardFooter(term)), 2.5, "image/jpeg");
           const x = 12 + (i % 2) * (cw + 6), yy = 20 + Math.floor(i / 2) * (ch + 6);
           doc.addImage(img.data, "JPEG", x, yy, cw, ch);
           doc.setLineDashPattern([2, 2], 0);

@@ -71,7 +71,9 @@ Deno.test("finalize: rejects AI objectives without a measurable criterion", () =
 Deno.test("prompt: IB02/IB03 concurrency + add-on week wording", () => {
   const plan = IBRAIN_TERM1.pg;
   const p2 = buildIbrainPrompt(plan, { levelKey: "pg", week: 2, session: 3 }, LEARNING_OUTCOMES.pg);
-  assert(p2.includes("SWAPPED from IB02"));
+  assert(p2.includes("In IB03 the groups swap"));
+  assert(p2.includes("ONE main teacher"));
+  assert(!p2.includes("Teacher 2 at"));
   assert(p2.includes("THIS IS WEEK 2 OF THE BLOCK"));
   assert(p2.includes("EY.PG.LL"));
   assert(!p2.includes("EY.PN."));
